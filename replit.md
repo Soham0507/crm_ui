@@ -1,17 +1,18 @@
-# CRM Tool
+# CRM Pro - Professional CRM Platform
 
 ## Overview
 
-This is a modern Customer Relationship Management (CRM) tool built with a full-stack architecture combining React frontend with Express.js backend. The application features a hybrid UI design inspired by Airtable's grid functionality and Pipedrive's pipeline visualization, providing both tabular data management and visual sales funnel tracking.
+CRM Pro is a modern Customer Relationship Management platform built with enterprise-grade architecture. The application combines Airtable's intuitive grid interface with Pipedrive's visual pipeline management, enhanced with secure authentication and a stunning landing page experience. Built for modern sales teams who demand simplicity without sacrificing power.
 
 ## System Architecture
 
-The system follows a monorepo structure with clear separation between client, server, and shared components:
+The system follows a production-ready monorepo structure with comprehensive authentication and database persistence:
 
-- **Frontend**: React with TypeScript, using Vite for build tooling
-- **Backend**: Express.js with TypeScript for API endpoints
-- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
-- **Styling**: Tailwind CSS with shadcn/ui component library
+- **Frontend**: React with TypeScript, using Vite for lightning-fast builds
+- **Backend**: Express.js with TypeScript for secure API endpoints  
+- **Database**: PostgreSQL with Drizzle ORM for type-safe operations
+- **Authentication**: Replit Auth with OpenID Connect for secure user management
+- **Styling**: Tailwind CSS with shadcn/ui component library and custom gradients
 - **State Management**: TanStack Query for server state management
 
 ## Key Components
@@ -30,11 +31,13 @@ The system follows a monorepo structure with clear separation between client, se
 - **Session Management**: Basic session handling with connect-pg-simple
 
 ### Database Schema
-The system uses four main entities:
-- **Contacts**: Core contact information with status tracking and deal values
-- **Notes**: Timestamped notes associated with contacts
-- **Tasks**: Task management with due dates and completion status
-- **Activities**: Activity logging for contact interactions and status changes
+The system uses a comprehensive schema with user isolation and authentication:
+- **Users**: Secure user profiles with Replit Auth integration
+- **Sessions**: Persistent session management for authentication state
+- **Contacts**: User-scoped contact information with status tracking and deal values
+- **Notes**: Timestamped notes with contact associations
+- **Tasks**: Task management with due dates and completion tracking  
+- **Activities**: Comprehensive activity logging for contact interactions
 
 ### UI Components
 - **Grid View**: Airtable-style data table with in-place editing, sorting, and filtering
@@ -85,8 +88,24 @@ The Replit configuration includes:
 - Autoscale deployment target for production
 - Port 5000 for local development with external port 80
 
-## Changelog
-- June 18, 2025. Initial setup
+## Recent Changes
+
+### June 18, 2025 - Major Platform Enhancement
+- ✓ Converted from in-memory to PostgreSQL database with Drizzle ORM
+- ✓ Integrated Replit Authentication with OpenID Connect  
+- ✓ Created stunning gradient-based landing page with hero sections
+- ✓ Added user-scoped data isolation and security
+- ✓ Implemented comprehensive session management
+- ✓ Enhanced UI with modern gradients and professional branding
+- ✓ Added user profiles with avatars and logout functionality
+- ✓ Secured all API endpoints with authentication middleware
+
+### Architecture Improvements
+- Database migration from MemStorage to DatabaseStorage
+- Authentication flow with automatic redirects
+- User-specific data access patterns
+- Professional landing page with feature showcase
+- Enhanced error handling and unauthorized request management
 
 ## User Preferences
 

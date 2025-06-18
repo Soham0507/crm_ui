@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   LayoutGrid, 
   GitBranch, 
   Users, 
   FileText, 
   BarChart3,
-  User
+  User,
+  LogOut
 } from "lucide-react";
 
 interface SidebarProps {
@@ -15,15 +18,27 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
+  const { user } = useAuth();
+
+  const getInitials = (user: any) => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
   return (
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 flex flex-col">
       {/* Logo & Brand */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
             <Users className="w-5 h-5 text-white" />
           </div>
-          <h1 className="ml-3 text-xl font-bold text-gray-900">CRM Pro</h1>
+          <h1 className="ml-3 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CRM Pro</h1>
         </div>
       </div>
 
@@ -100,14 +115,33 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
 
       {/* User Profile */}
       <div className="px-4 py-4 border-t border-gray-200">
-        <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-            <User className="h-4 w-4 text-gray-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center min-w-0 flex-1">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user?.profileImageUrl} />
+              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                {getInitials(user)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="ml-3 min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-700 truncate">
+                {user?.firstName && user?.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user?.email?.split('@')[0] || 'User'
+                }
+              </p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700">John Doe</p>
-            <p className="text-xs text-gray-500">john@company.com</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+            onClick={() => window.location.href = '/api/logout'}
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
