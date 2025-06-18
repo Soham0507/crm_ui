@@ -271,6 +271,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Custom Tables routes
+  app.get("/api/custom-tables", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tables = await storage.getCustomTables(userId);
+      res.json(tables);
+    } catch (error) {
+      console.error("Error fetching custom tables:", error);
+      res.status(500).json({ message: "Failed to fetch custom tables" });
+    }
+  });
+
+  app.get("/api/custom-tables/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.id);
+      const table = await storage.getCustomTableWithRecords(tableId, userId);
+      
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json(table);
+    } catch (error) {
+      console.error("Error fetching custom table:", error);
+      res.status(500).json({ message: "Failed to fetch custom table" });
+    }
+  });
+
+  app.post("/api/custom-tables", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableData = { ...req.body, userId };
+      const table = await storage.createCustomTable(tableData);
+      res.json(table);
+    } catch (error) {
+      console.error("Error creating custom table:", error);
+      res.status(500).json({ message: "Failed to create custom table" });
+    }
+  });
+
+  app.patch("/api/custom-tables/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.id);
+      const table = await storage.updateCustomTable(tableId, req.body, userId);
+      
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json(table);
+    } catch (error) {
+      console.error("Error updating custom table:", error);
+      res.status(500).json({ message: "Failed to update custom table" });
+    }
+  });
+
+  app.delete("/api/custom-tables/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.id);
+      const success = await storage.deleteCustomTable(tableId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      res.json({ message: "Table deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting custom table:", error);
+      res.status(500).json({ message: "Failed to delete custom table" });
+    }
+  });
+
+  // Custom Table Records routes
+  app.post("/api/custom-tables/:tableId/records", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.tableId);
+      const recordData = { ...req.body, tableId, userId };
+      const record = await storage.createCustomTableRecord(recordData);
+      res.json(record);
+    } catch (error) {
+      console.error("Error creating custom table record:", error);
+      res.status(500).json({ message: "Failed to create custom table record" });
+    }
+  });
+
+  app.patch("/api/custom-tables/:tableId/records/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recordId = parseInt(req.params.id);
+      const record = await storage.updateCustomTableRecord(recordId, req.body, userId);
+      
+      if (!record) {
+        return res.status(404).json({ message: "Record not found" });
+      }
+      
+      res.json(record);
+    } catch (error) {
+      console.error("Error updating custom table record:", error);
+      res.status(500).json({ message: "Failed to update custom table record" });
+    }
+  });
+
+  app.delete("/api/custom-tables/:tableId/records/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const recordId = parseInt(req.params.id);
+      const success = await storage.deleteCustomTableRecord(recordId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Record not found" });
+      }
+      
+      res.json({ message: "Record deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting custom table record:", error);
+      res.status(500).json({ message: "Failed to delete custom table record" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
