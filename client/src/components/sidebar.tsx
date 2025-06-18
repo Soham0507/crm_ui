@@ -9,7 +9,8 @@ import {
   FileText, 
   BarChart3,
   User,
-  LogOut
+  LogOut,
+  Database
 } from "lucide-react";
 
 interface SidebarProps {
@@ -92,6 +93,15 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             >
               <Users className="mr-3 h-5 w-5" />
               Contacts
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => window.location.href = '/custom-tables'}
+            >
+              <Database className="mr-3 h-5 w-5" />
+              Custom Tables
             </Button>
             <Button
               variant="ghost"

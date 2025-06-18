@@ -24,7 +24,7 @@ import {
   Mail,
   Phone
 } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import type { TableColumn, CustomTableSchema } from "@shared/schema";
 
 interface CustomTableBuilderProps {
@@ -249,16 +249,17 @@ export default function CustomTableBuilder({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {Object.entries(fieldTypeLabels).map(([value, label]) => (
-                                  <SelectItem key={value} value={value}>
-                                    <div className="flex items-center">
-                                      {React.createElement(fieldTypeIcons[value as keyof typeof fieldTypeIcons], {
-                                        className: "h-4 w-4 mr-2"
-                                      })}
-                                      {label}
-                                    </div>
-                                  </SelectItem>
-                                ))}
+                                {Object.entries(fieldTypeLabels).map(([value, label]) => {
+                                  const IconComponent = fieldTypeIcons[value as keyof typeof fieldTypeIcons];
+                                  return (
+                                    <SelectItem key={value} value={value}>
+                                      <div className="flex items-center">
+                                        <IconComponent className="h-4 w-4 mr-2" />
+                                        {label}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           </div>

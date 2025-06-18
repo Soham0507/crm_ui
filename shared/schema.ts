@@ -73,6 +73,28 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Custom Tables Schema
+export const customTables = pgTable("custom_tables", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tableName: varchar("table_name", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  schema: jsonb("schema").notNull(), // Store column definitions
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Custom Table Records
+export const customTableRecords = pgTable("custom_table_records", {
+  id: serial("id").primaryKey(),
+  tableId: integer("table_id").notNull().references(() => customTables.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  data: jsonb("data").notNull(), // Store record data as JSON
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
   userId: true,
