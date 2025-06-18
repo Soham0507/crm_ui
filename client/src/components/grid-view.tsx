@@ -18,6 +18,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import EditableCell from "@/components/editable-cell";
 import RowActionsMenu from "@/components/row-actions-menu";
+import BulkActionsBar from "@/components/bulk-actions-bar";
+import ColumnAnalytics from "@/components/column-analytics";
 import type { Contact } from "@shared/schema";
 import type { TableSettings } from "@/components/table-settings-modal";
 import { isAfter, addDays } from "date-fns";
@@ -31,6 +33,7 @@ interface GridViewProps {
 export default function GridView({ contacts, onContactSelect, tableSettings }: GridViewProps) {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const itemsPerPage = tableSettings.pageSize;
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -154,8 +157,23 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
 
   const statusOptions = ['lead', 'qualified', 'proposal', 'closed-won', 'closed-lost'];
 
+  const handleClearSelection = () => {
+    setSelectedContacts(new Set());
+  };
+
+  const handleContactsUpdated = () => {
+    setSelectedContacts(new Set());
+  };
+
   return (
     <div className="h-full px-6 py-6">
+      <BulkActionsBar
+        selectedContacts={selectedContacts}
+        contacts={contacts}
+        onClearSelection={handleClearSelection}
+        onContactsUpdated={handleContactsUpdated}
+      />
+      
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
         {/* Table */}
         <div className="flex-1 overflow-auto custom-scrollbar">
@@ -268,12 +286,27 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
 
         {/* Pagination */}
         {contacts.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} results
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} results
+                </div>
+                {selectedContacts.size > 0 && (
+                  <div className="text-sm text-blue-600">
+                    {selectedContacts.size} selected
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAnalytics(!showAnalytics)}
+                >
+                  {showAnalytics ? 'Hide' : 'Show'} Analytics
+                </Button>
+                
                 <Button
                   variant="outline"
                   size="sm"
@@ -310,6 +343,13 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
           </div>
         )}
       </div>
+
+      {/* Analytics Panel */}
+      <ColumnAnalytics
+        contacts={contacts}
+        isVisible={showAnalytics}
+        onToggle={() => setShowAnalytics(!showAnalytics)}
+      />
     </div>
   );
 }
