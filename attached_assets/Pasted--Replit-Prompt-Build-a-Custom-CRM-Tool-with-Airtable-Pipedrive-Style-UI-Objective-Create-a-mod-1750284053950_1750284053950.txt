@@ -1,0 +1,86 @@
+📇 Replit Prompt: Build a Custom CRM Tool with Airtable + Pipedrive-Style UI
+Objective:
+Create a modern, visual CRM platform with a hybrid UI that combines the grid/table layout of Airtable for data management and the drag-and-drop pipeline view of Pipedrive for sales/lead tracking. The CRM should support contact management, deal stages, task tracking, notes, and dynamic filtering.
+
+✅ Core Features to Build
+1. 🧾 Airtable-Style Grid View
+Display records in a table with:
+
+Columns: Name, Company, Status, Email, Phone, Deal Value, Tags, Notes
+
+In-place editing for all cells
+
+Add/Edit/Delete records
+
+Sort and filter by any column
+
+Multi-select actions (e.g., bulk tag or delete)
+
+2. 🔁 Pipedrive-Style Pipeline View
+Visualize deals by stage (e.g., Lead → Qualified → Proposal → Closed)
+
+Drag and drop cards between columns to update stage
+
+Show key info on card: Contact name, company, deal value, status color
+
+Click card to open full contact detail view or edit form
+
+3. 🔍 Filtering and Views
+Toggle between:
+
+Grid view (All contacts/deals)
+
+Pipeline view (Deals by stage)
+
+Calendar view (optional: tasks, follow-ups)
+
+Save filter presets (e.g., “All Open Deals > $5K”)
+
+4. ✏️ Notes, Tasks & Activity
+Each contact/deal page should support:
+
+Notes with timestamps
+
+Task creation (e.g., "Follow up in 3 days")
+
+Activity history (auto-log stage changes or edits)
+
+5. 📤 Import / Export
+Import CSV/XLSX file to populate records
+
+Export filtered views as CSV
+
+Optional: Email integration or webhook for automation
+
+🧱 Stack Suggestions
+Layer	Stack/Tools
+Frontend	React + Tailwind + React Table/Grid Layout
+Backend	Node.js or FastAPI
+DB/Storage	Supabase, Replit DB, or Firebase
+Drag & Drop	react-beautiful-dnd or dnd-kit
+Auth	Supabase Auth or Google OAuth
+Styling	ShadCN, DaisyUI, or HeadlessUI + Tailwind
+
+🧠 Stretch Features
+AI assistant to summarize contact history
+
+Email sync and Gmail/Outlook integration
+
+Reminders or calendar sync
+
+CRM insights: “Which deals are stalled?”, “Top 5 hot leads”
+
+💬 Example Replit Command Prompt
+Build a custom CRM web app with:
+
+Airtable-style editable table for contacts and leads
+
+Pipedrive-style drag-and-drop sales pipeline
+
+Notes, tasks, filtering, and deal stages
+
+Clean React + Tailwind UI
+
+Replit DB or Supabase backend
+
+Support CSV import/export
