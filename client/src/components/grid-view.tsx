@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,12 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Trash2, ChevronLeft, ChevronRight, AlertCircle, Clock, TrendingUp } from "lucide-react";
 import { formatCurrency, getStatusColor, getStatusLabel, formatPhone, formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import EditableCell from "@/components/editable-cell";
+import RowActionsMenu from "@/components/row-actions-menu";
 import type { Contact } from "@shared/schema";
 import type { TableSettings } from "@/components/table-settings-modal";
+import { isAfter, addDays } from "date-fns";
 
 interface GridViewProps {
   contacts: Contact[];
@@ -37,10 +40,31 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
   const endIndex = startIndex + itemsPerPage;
   const currentContacts = contacts.slice(startIndex, endIndex);
 
+  const updateContactMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Contact> }) =>
+      apiRequest('PATCH', `/api/contacts/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+      toast({
+        title: "Contact updated",
+        description: "Changes have been saved successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteContactMutation = useMutation({
     mutationFn: (id: number) => apiRequest('DELETE', `/api/contacts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
       toast({
         title: "Contact deleted",
         description: "The contact has been successfully deleted.",
@@ -79,6 +103,13 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
     }
   };
 
+  const handleCellUpdate = (contactId: number, field: string, value: any) => {
+    updateContactMutation.mutate({
+      id: contactId,
+      data: { [field]: value }
+    });
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -87,6 +118,41 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Enhanced row styling based on data conditions
+  const getRowClassName = (contact: Contact) => {
+    const baseClass = "hover:bg-gray-50 cursor-pointer transition-colors";
+    const classes = [baseClass];
+
+    // Highlight high-value deals
+    if ((contact.dealValue || 0) > 10000) {
+      classes.push("border-l-4 border-l-green-400");
+    }
+
+    // Highlight overdue follow-ups (mock - in real app would check actual follow-up dates)
+    const isHighPriority = contact.tags?.includes('priority') || contact.tags?.includes('hot');
+    if (isHighPriority) {
+      classes.push("bg-yellow-50");
+    }
+
+    return classes.join(" ");
+  };
+
+  // Get field type for editable cells
+  const getFieldType = (columnKey: string): 'text' | 'email' | 'phone' | 'currency' | 'select' | 'date' | 'tags' => {
+    switch (columnKey) {
+      case 'email': return 'email';
+      case 'phone': return 'phone';
+      case 'dealValue': return 'currency';
+      case 'status': return 'select';
+      case 'createdAt':
+      case 'updatedAt': return 'date';
+      case 'tags': return 'tags';
+      default: return 'text';
+    }
+  };
+
+  const statusOptions = ['lead', 'qualified', 'proposal', 'closed-won', 'closed-lost'];
 
   return (
     <div className="h-full px-6 py-6">
@@ -127,7 +193,7 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
                 currentContacts.map((contact) => (
                   <TableRow 
                     key={contact.id} 
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    className={getRowClassName(contact)}
                     onClick={() => onContactSelect(contact.id)}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -139,84 +205,59 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
                       />
                     </TableCell>
                     {tableSettings.columns.filter(col => col.visible).map((column) => (
-                      <TableCell key={column.key}>
-                        {column.key === 'name' && (
+                      <TableCell key={column.key} onClick={(e) => e.stopPropagation()}>
+                        {column.key === 'name' ? (
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-10 w-10">
                               <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
                                 {getInitials(contact.name)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="font-medium text-gray-900">{contact.name}</div>
-                              <div className="text-sm text-gray-500">{contact.company}</div>
+                            <div className="min-w-0 flex-1">
+                              <EditableCell
+                                value={contact.name}
+                                type="text"
+                                onSave={(value) => handleCellUpdate(contact.id, 'name', value)}
+                                onCancel={() => {}}
+                                placeholder="Contact name"
+                              />
+                              <EditableCell
+                                value={contact.company}
+                                type="text"
+                                onSave={(value) => handleCellUpdate(contact.id, 'company', value)}
+                                onCancel={() => {}}
+                                placeholder="Company name"
+                                className="text-sm text-gray-500 mt-1"
+                              />
+                            </div>
+                            {/* Visual indicators */}
+                            <div className="flex flex-col space-y-1">
+                              {(contact.dealValue || 0) > 10000 && (
+                                <TrendingUp className="h-4 w-4 text-green-600" title="High value deal" />
+                              )}
+                              {contact.tags?.includes('priority') && (
+                                <AlertCircle className="h-4 w-4 text-orange-600" title="Priority contact" />
+                              )}
                             </div>
                           </div>
-                        )}
-                        {column.key === 'status' && (
-                          <Badge className={getStatusColor(contact.status)}>
-                            {getStatusLabel(contact.status)}
-                          </Badge>
-                        )}
-                        {column.key === 'email' && (
-                          <span className="text-gray-900">{contact.email}</span>
-                        )}
-                        {column.key === 'phone' && (
-                          <span className="text-gray-900">
-                            {contact.phone ? formatPhone(contact.phone) : '-'}
-                          </span>
-                        )}
-                        {column.key === 'dealValue' && (
-                          <span className="font-medium text-gray-900">
-                            {formatCurrency(contact.dealValue || 0)}
-                          </span>
-                        )}
-                        {column.key === 'tags' && (
-                          <div className="flex flex-wrap gap-1">
-                            {contact.tags?.slice(0, 2).map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {(contact.tags?.length || 0) > 2 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{(contact.tags?.length || 0) - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        {column.key === 'createdAt' && (
-                          <span className="text-sm text-gray-500">
-                            {formatDate(contact.createdAt!)}
-                          </span>
-                        )}
-                        {column.key === 'updatedAt' && (
-                          <span className="text-sm text-gray-500">
-                            {formatDate(contact.updatedAt!)}
-                          </span>
+                        ) : (
+                          <EditableCell
+                            value={contact[column.key as keyof Contact]}
+                            type={getFieldType(column.key)}
+                            options={column.key === 'status' ? statusOptions : undefined}
+                            onSave={(value) => handleCellUpdate(contact.id, column.key, value)}
+                            onCancel={() => {}}
+                            placeholder={`Enter ${column.label.toLowerCase()}`}
+                          />
                         )}
                       </TableCell>
                     ))}
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
-                          onClick={() => onContactSelect(contact.id)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-                          onClick={() => handleDeleteContact(contact.id)}
-                          disabled={deleteContactMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <RowActionsMenu
+                        contact={contact}
+                        onViewDetails={() => onContactSelect(contact.id)}
+                        onEdit={() => onContactSelect(contact.id)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))

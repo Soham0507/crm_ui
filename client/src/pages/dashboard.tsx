@@ -8,6 +8,7 @@ import ContactModal from "@/components/contact-modal";
 import AddContactModal from "@/components/add-contact-modal";
 import ImportHelpModal from "@/components/import-help-modal";
 import TableSettingsModal, { type TableSettings } from "@/components/table-settings-modal";
+import AdvancedFilters, { type FilterCriteria } from "@/components/advanced-filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,18 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportHelp, setShowImportHelp] = useState(false);
   const [showTableSettings, setShowTableSettings] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterCriteria>({
+    search: '',
+    statuses: [],
+    dealValueMin: null,
+    dealValueMax: null,
+    dateRange: { from: null, to: null },
+    tags: [],
+    companies: [],
+    hasPhone: null,
+    hasNotes: null,
+  });
   const [tableSettings, setTableSettings] = useState<TableSettings>(() => {
     const saved = localStorage.getItem('crm-table-settings');
     return saved ? JSON.parse(saved) : {
@@ -61,14 +74,61 @@ export default function Dashboard() {
   });
 
   const filteredContacts = contacts.filter((contact: Contact) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      contact.name.toLowerCase().includes(query) ||
-      contact.email.toLowerCase().includes(query) ||
-      contact.company?.toLowerCase().includes(query) ||
-      contact.status.toLowerCase().includes(query)
-    );
+    // Basic search
+    if (filters.search) {
+      const query = filters.search.toLowerCase();
+      const matchesSearch = (
+        contact.name.toLowerCase().includes(query) ||
+        contact.email.toLowerCase().includes(query) ||
+        contact.company?.toLowerCase().includes(query) ||
+        contact.status.toLowerCase().includes(query) ||
+        contact.tags?.some(tag => tag.toLowerCase().includes(query))
+      );
+      if (!matchesSearch) return false;
+    }
+
+    // Status filter
+    if (filters.statuses.length > 0 && !filters.statuses.includes(contact.status)) {
+      return false;
+    }
+
+    // Deal value range
+    const dealValue = contact.dealValue || 0;
+    if (filters.dealValueMin !== null && dealValue < filters.dealValueMin) {
+      return false;
+    }
+    if (filters.dealValueMax !== null && dealValue > filters.dealValueMax) {
+      return false;
+    }
+
+    // Date range
+    if (filters.dateRange.from && contact.createdAt) {
+      const contactDate = new Date(contact.createdAt);
+      if (contactDate < filters.dateRange.from) return false;
+    }
+    if (filters.dateRange.to && contact.createdAt) {
+      const contactDate = new Date(contact.createdAt);
+      if (contactDate > filters.dateRange.to) return false;
+    }
+
+    // Tags filter
+    if (filters.tags.length > 0) {
+      const hasMatchingTag = filters.tags.some(tag => 
+        contact.tags?.includes(tag)
+      );
+      if (!hasMatchingTag) return false;
+    }
+
+    // Companies filter
+    if (filters.companies.length > 0 && contact.company) {
+      if (!filters.companies.includes(contact.company)) return false;
+    }
+
+    // Additional criteria
+    if (filters.hasPhone === true && !contact.phone) return false;
+    // Note: hasNotes would require checking if contact has notes in a real implementation
+
+    return true;
   });
 
   const handleExport = async () => {
@@ -196,15 +256,29 @@ export default function Dashboard() {
                     type="text"
                     placeholder="Search contacts, deals..."
                     className="pl-10 w-64"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   />
                 </div>
 
                 {/* Filters & Settings */}
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters(true)}
+                >
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
+                  {(filters.statuses.length > 0 || filters.tags.length > 0 || filters.companies.length > 0 || 
+                    filters.dealValueMin || filters.dealValueMax || filters.dateRange.from || filters.dateRange.to ||
+                    filters.hasPhone || filters.hasNotes) && (
+                    <Badge variant="secondary" className="ml-2 h-4 w-4 p-0 text-xs">
+                      {[filters.statuses.length, filters.tags.length, filters.companies.length, 
+                        filters.dealValueMin ? 1 : 0, filters.dealValueMax ? 1 : 0,
+                        filters.dateRange.from ? 1 : 0, filters.dateRange.to ? 1 : 0,
+                        filters.hasPhone ? 1 : 0, filters.hasNotes ? 1 : 0].reduce((a, b) => a + b, 0)}
+                    </Badge>
+                  )}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -303,6 +377,16 @@ export default function Dashboard() {
           onClose={() => setShowTableSettings(false)}
           onSave={handleTableSettingsSave}
           currentSettings={tableSettings}
+        />
+      )}
+
+      {showAdvancedFilters && (
+        <AdvancedFilters
+          isOpen={showAdvancedFilters}
+          onClose={() => setShowAdvancedFilters(false)}
+          filters={filters}
+          onFiltersChange={setFilters}
+          contacts={contacts}
         />
       )}
     </div>
