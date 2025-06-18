@@ -46,6 +46,21 @@ export interface IStorage {
   // Activities
   getActivitiesByContactId(contactId: number): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+  
+  // Custom Tables
+  getCustomTables(userId: string): Promise<CustomTable[]>;
+  getCustomTable(id: number, userId: string): Promise<CustomTable | undefined>;
+  getCustomTableWithRecords(id: number, userId: string): Promise<CustomTableWithRecords | undefined>;
+  createCustomTable(table: InsertCustomTable): Promise<CustomTable>;
+  updateCustomTable(id: number, table: Partial<InsertCustomTable>, userId: string): Promise<CustomTable | undefined>;
+  deleteCustomTable(id: number, userId: string): Promise<boolean>;
+  
+  // Custom Table Records
+  getCustomTableRecords(tableId: number, userId: string): Promise<CustomTableRecord[]>;
+  getCustomTableRecord(id: number, userId: string): Promise<CustomTableRecord | undefined>;
+  createCustomTableRecord(record: InsertCustomTableRecord): Promise<CustomTableRecord>;
+  updateCustomTableRecord(id: number, record: Partial<InsertCustomTableRecord>, userId: string): Promise<CustomTableRecord | undefined>;
+  deleteCustomTableRecord(id: number, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -235,6 +250,97 @@ export class DatabaseStorage implements IStorage {
       .values(insertActivity)
       .returning();
     return activity;
+  }
+
+  // Custom Tables
+  async getCustomTables(userId: string): Promise<CustomTable[]> {
+    return await db
+      .select()
+      .from(customTables)
+      .where(and(eq(customTables.userId, userId), eq(customTables.isActive, true)))
+      .orderBy(customTables.createdAt);
+  }
+
+  async getCustomTable(id: number, userId: string): Promise<CustomTable | undefined> {
+    const [table] = await db
+      .select()
+      .from(customTables)
+      .where(and(eq(customTables.id, id), eq(customTables.userId, userId)));
+    return table;
+  }
+
+  async getCustomTableWithRecords(id: number, userId: string): Promise<CustomTableWithRecords | undefined> {
+    const table = await this.getCustomTable(id, userId);
+    if (!table) return undefined;
+
+    const records = await this.getCustomTableRecords(id, userId);
+    return { ...table, records };
+  }
+
+  async createCustomTable(insertTable: InsertCustomTable): Promise<CustomTable> {
+    const [table] = await db
+      .insert(customTables)
+      .values(insertTable)
+      .returning();
+    return table;
+  }
+
+  async updateCustomTable(id: number, updateData: Partial<InsertCustomTable>, userId: string): Promise<CustomTable | undefined> {
+    const [table] = await db
+      .update(customTables)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(and(eq(customTables.id, id), eq(customTables.userId, userId)))
+      .returning();
+    return table;
+  }
+
+  async deleteCustomTable(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .update(customTables)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(eq(customTables.id, id), eq(customTables.userId, userId)));
+    return result.rowCount > 0;
+  }
+
+  // Custom Table Records
+  async getCustomTableRecords(tableId: number, userId: string): Promise<CustomTableRecord[]> {
+    return await db
+      .select()
+      .from(customTableRecords)
+      .where(and(eq(customTableRecords.tableId, tableId), eq(customTableRecords.userId, userId)))
+      .orderBy(customTableRecords.createdAt);
+  }
+
+  async getCustomTableRecord(id: number, userId: string): Promise<CustomTableRecord | undefined> {
+    const [record] = await db
+      .select()
+      .from(customTableRecords)
+      .where(and(eq(customTableRecords.id, id), eq(customTableRecords.userId, userId)));
+    return record;
+  }
+
+  async createCustomTableRecord(insertRecord: InsertCustomTableRecord): Promise<CustomTableRecord> {
+    const [record] = await db
+      .insert(customTableRecords)
+      .values(insertRecord)
+      .returning();
+    return record;
+  }
+
+  async updateCustomTableRecord(id: number, updateData: Partial<InsertCustomTableRecord>, userId: string): Promise<CustomTableRecord | undefined> {
+    const [record] = await db
+      .update(customTableRecords)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(and(eq(customTableRecords.id, id), eq(customTableRecords.userId, userId)))
+      .returning();
+    return record;
+  }
+
+  async deleteCustomTableRecord(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(customTableRecords)
+      .where(and(eq(customTableRecords.id, id), eq(customTableRecords.userId, userId)));
+    return result.rowCount > 0;
   }
 }
 

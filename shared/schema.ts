@@ -95,6 +95,18 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
   createdAt: true,
 });
 
+export const insertCustomTableSchema = createInsertSchema(customTables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomTableRecordSchema = createInsertSchema(customTableRecords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
@@ -105,9 +117,36 @@ export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type CustomTable = typeof customTables.$inferSelect;
+export type InsertCustomTable = z.infer<typeof insertCustomTableSchema>;
+export type CustomTableRecord = typeof customTableRecords.$inferSelect;
+export type InsertCustomTableRecord = z.infer<typeof insertCustomTableRecordSchema>;
 
 export type ContactWithDetails = Contact & {
   notes: Note[];
   tasks: Task[];
   activities: Activity[];
+};
+
+// Custom Table Schema Types
+export interface TableColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'currency' | 'date' | 'dropdown' | 'boolean' | 'email' | 'phone';
+  required?: boolean;
+  options?: string[]; // For dropdown type
+  defaultValue?: any;
+}
+
+export interface CustomTableSchema {
+  columns: TableColumn[];
+  settings: {
+    allowAdd: boolean;
+    allowEdit: boolean;
+    allowDelete: boolean;
+  };
+}
+
+export type CustomTableWithRecords = CustomTable & {
+  records: CustomTableRecord[];
 };

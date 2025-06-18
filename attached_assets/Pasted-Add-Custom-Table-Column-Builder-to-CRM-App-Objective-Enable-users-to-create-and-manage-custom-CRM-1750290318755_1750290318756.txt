@@ -1,0 +1,103 @@
+Add Custom Table + Column Builder to CRM App
+Objective:
+Enable users to create and manage custom CRM tables with customizable columns. Each column can be configured with a specific data type, and the table should dynamically render the correct input fields for each row based on the type.
+
+✅ Feature Requirements
+1. ➕ Custom Table Builder
+Allow users to:
+
+Create a new table (e.g., “Clients”, “Investors”, “Deals”)
+
+Name the table
+
+View all created tables in a dropdown or tabbed layout
+
+2. 🧩 Custom Column Creator
+When creating a table, or later via edit:
+
+Add new columns with:
+
+Column name
+
+Field type (dropdown selector)
+
+Supported field types:
+
+Text
+
+Number
+
+Currency
+
+Date
+
+Dropdown (with options)
+
+Boolean (checkbox/toggle)
+
+Email/Phone (stretch)
+
+3. 🖥️ Dynamic Table Rendering
+Render the table with appropriate input widgets:
+
+Date picker for date fields
+
+Currency formatting
+
+Dropdown with user-defined options
+
+Switch/checkbox for Boolean
+
+Inline editing supported
+
+4. 💾 Save Schema per Table
+Each table has its own schema stored in DB:
+
+Columns: name, type, optional config (e.g., dropdown options)
+
+Store in Replit DB or Supabase with:
+
+json
+Copy
+Edit
+{
+  tableName: "Investors",
+  columns: [
+    { name: "Name", type: "Text" },
+    { name: "Fund Size", type: "Currency" },
+    { name: "Status", type: "Dropdown", options: ["Active", "Paused", "Lost"] },
+    { name: "Follow-Up", type: "Date" }
+  ]
+}
+🧱 Recommended Stack
+Component	Tool/Framework
+UI Framework	React + Tailwind CSS
+Table Engine	TanStack Table or react-data-grid
+State Management	Context API or Zustand
+Storage	Replit DB or Supabase (dynamic schemas)
+Field Types	Render via component map (type → component)
+
+🧠 Stretch Features
+Drag-and-drop column reordering
+
+Custom column visibility per user
+
+Export custom table as CSV
+
+Use AI to auto-suggest field types from sample data
+
+💬 Example User Flow
+User clicks “Create Table”
+
+Names it “VC Firms”
+
+Adds columns:
+
+“Firm Name” → Text
+
+“AUM” → Currency
+
+“Status” → Dropdown (Active, Inactive, Blacklisted)
+
+Clicks Save → table is now editable with proper field types shown per row
+
