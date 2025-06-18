@@ -3,6 +3,7 @@ import {
   notes, 
   tasks, 
   activities,
+  users,
   type Contact, 
   type InsertContact,
   type Note,
@@ -11,17 +12,25 @@ import {
   type InsertTask,
   type Activity,
   type InsertActivity,
-  type ContactWithDetails
+  type ContactWithDetails,
+  type User,
+  type UpsertUser
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
   // Contacts
-  getContacts(): Promise<Contact[]>;
-  getContact(id: number): Promise<Contact | undefined>;
-  getContactWithDetails(id: number): Promise<ContactWithDetails | undefined>;
-  createContact(contact: InsertContact): Promise<Contact>;
-  updateContact(id: number, contact: Partial<InsertContact>): Promise<Contact | undefined>;
-  deleteContact(id: number): Promise<boolean>;
+  getContacts(userId: string): Promise<Contact[]>;
+  getContact(id: number, userId: string): Promise<Contact | undefined>;
+  getContactWithDetails(id: number, userId: string): Promise<ContactWithDetails | undefined>;
+  createContact(contact: InsertContact, userId: string): Promise<Contact>;
+  updateContact(id: number, contact: Partial<InsertContact>, userId: string): Promise<Contact | undefined>;
+  deleteContact(id: number, userId: string): Promise<boolean>;
   
   // Notes
   getNotesByContactId(contactId: number): Promise<Note[]>;
@@ -39,40 +48,43 @@ export interface IStorage {
   createActivity(activity: InsertActivity): Promise<Activity>;
 }
 
-export class MemStorage implements IStorage {
-  private contacts: Map<number, Contact>;
-  private notes: Map<number, Note>;
-  private tasks: Map<number, Task>;
-  private activities: Map<number, Activity>;
-  private currentContactId: number;
-  private currentNoteId: number;
-  private currentTaskId: number;
-  private currentActivityId: number;
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
 
-  constructor() {
-    this.contacts = new Map();
-    this.notes = new Map();
-    this.tasks = new Map();
-    this.activities = new Map();
-    this.currentContactId = 1;
-    this.currentNoteId = 1;
-    this.currentTaskId = 1;
-    this.currentActivityId = 1;
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   // Contacts
-  async getContacts(): Promise<Contact[]> {
-    return Array.from(this.contacts.values()).sort((a, b) => 
-      new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
-    );
+  async getContacts(userId: string): Promise<Contact[]> {
+    return await db.select().from(contacts)
+      .where(eq(contacts.userId, userId))
+      .orderBy(contacts.createdAt);
   }
 
-  async getContact(id: number): Promise<Contact | undefined> {
-    return this.contacts.get(id);
+  async getContact(id: number, userId: string): Promise<Contact | undefined> {
+    const [contact] = await db.select().from(contacts)
+      .where(and(eq(contacts.id, id), eq(contacts.userId, userId)));
+    return contact || undefined;
   }
 
-  async getContactWithDetails(id: number): Promise<ContactWithDetails | undefined> {
-    const contact = this.contacts.get(id);
+  async getContactWithDetails(id: number, userId: string): Promise<ContactWithDetails | undefined> {
+    const contact = await this.getContact(id, userId);
     if (!contact) return undefined;
 
     const contactNotes = await this.getNotesByContactId(id);
@@ -87,20 +99,15 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async createContact(insertContact: InsertContact): Promise<Contact> {
-    const id = this.currentContactId++;
-    const now = new Date();
-    const contact: Contact = {
-      ...insertContact,
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.contacts.set(id, contact);
+  async createContact(insertContact: InsertContact, userId: string): Promise<Contact> {
+    const [contact] = await db
+      .insert(contacts)
+      .values({ ...insertContact, userId })
+      .returning();
 
     // Create initial activity
     await this.createActivity({
-      contactId: id,
+      contactId: contact.id,
       type: "status_change",
       description: `Contact created with status: ${contact.status}`,
     });
@@ -108,16 +115,15 @@ export class MemStorage implements IStorage {
     return contact;
   }
 
-  async updateContact(id: number, updateData: Partial<InsertContact>): Promise<Contact | undefined> {
-    const existing = this.contacts.get(id);
+  async updateContact(id: number, updateData: Partial<InsertContact>, userId: string): Promise<Contact | undefined> {
+    const existing = await this.getContact(id, userId);
     if (!existing) return undefined;
 
-    const updated: Contact = {
-      ...existing,
-      ...updateData,
-      updatedAt: new Date(),
-    };
-    this.contacts.set(id, updated);
+    const [updated] = await db
+      .update(contacts)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(and(eq(contacts.id, id), eq(contacts.userId, userId)))
+      .returning();
 
     // Track status changes
     if (updateData.status && updateData.status !== existing.status) {
@@ -131,36 +137,33 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async deleteContact(id: number): Promise<boolean> {
-    const deleted = this.contacts.delete(id);
-    if (deleted) {
-      // Clean up related data
-      const contactNotes = Array.from(this.notes.values()).filter(note => note.contactId === id);
-      const contactTasks = Array.from(this.tasks.values()).filter(task => task.contactId === id);
-      const contactActivities = Array.from(this.activities.values()).filter(activity => activity.contactId === id);
+  async deleteContact(id: number, userId: string): Promise<boolean> {
+    const contact = await this.getContact(id, userId);
+    if (!contact) return false;
 
-      contactNotes.forEach(note => this.notes.delete(note.id));
-      contactTasks.forEach(task => this.tasks.delete(task.id));
-      contactActivities.forEach(activity => this.activities.delete(activity.id));
-    }
-    return deleted;
+    // Delete related data
+    await db.delete(notes).where(eq(notes.contactId, id));
+    await db.delete(tasks).where(eq(tasks.contactId, id));
+    await db.delete(activities).where(eq(activities.contactId, id));
+    
+    const result = await db.delete(contacts)
+      .where(and(eq(contacts.id, id), eq(contacts.userId, userId)));
+    
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Notes
   async getNotesByContactId(contactId: number): Promise<Note[]> {
-    return Array.from(this.notes.values())
-      .filter(note => note.contactId === contactId)
-      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    return await db.select().from(notes)
+      .where(eq(notes.contactId, contactId))
+      .orderBy(notes.createdAt);
   }
 
   async createNote(insertNote: InsertNote): Promise<Note> {
-    const id = this.currentNoteId++;
-    const note: Note = {
-      ...insertNote,
-      id,
-      createdAt: new Date(),
-    };
-    this.notes.set(id, note);
+    const [note] = await db
+      .insert(notes)
+      .values(insertNote)
+      .returning();
 
     // Create activity
     await this.createActivity({
@@ -173,49 +176,41 @@ export class MemStorage implements IStorage {
   }
 
   async deleteNote(id: number): Promise<boolean> {
-    return this.notes.delete(id);
+    const result = await db.delete(notes).where(eq(notes.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Tasks
   async getTasksByContactId(contactId: number): Promise<Task[]> {
-    return Array.from(this.tasks.values())
-      .filter(task => task.contactId === contactId)
-      .sort((a, b) => {
-        if (a.completed !== b.completed) {
-          return a.completed ? 1 : -1;
-        }
-        return new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime();
-      });
+    return await db.select().from(tasks)
+      .where(eq(tasks.contactId, contactId))
+      .orderBy(tasks.completed, tasks.createdAt);
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = this.currentTaskId++;
-    const task: Task = {
-      ...insertTask,
-      id,
-      createdAt: new Date(),
-    };
-    this.tasks.set(id, task);
-
+    const [task] = await db
+      .insert(tasks)
+      .values(insertTask)
+      .returning();
     return task;
   }
 
   async updateTask(id: number, updateData: Partial<InsertTask>): Promise<Task | undefined> {
-    const existing = this.tasks.get(id);
-    if (!existing) return undefined;
+    const existing = await db.select().from(tasks).where(eq(tasks.id, id));
+    if (existing.length === 0) return undefined;
 
-    const updated: Task = {
-      ...existing,
-      ...updateData,
-    };
-    this.tasks.set(id, updated);
+    const [updated] = await db
+      .update(tasks)
+      .set(updateData)
+      .where(eq(tasks.id, id))
+      .returning();
 
     // Track task completion
-    if (updateData.completed && !existing.completed) {
+    if (updateData.completed && !existing[0].completed) {
       await this.createActivity({
-        contactId: existing.contactId,
+        contactId: existing[0].contactId,
         type: "task_completed",
-        description: `Completed task: ${existing.title}`,
+        description: `Completed task: ${existing[0].title}`,
       });
     }
 
@@ -223,26 +218,24 @@ export class MemStorage implements IStorage {
   }
 
   async deleteTask(id: number): Promise<boolean> {
-    return this.tasks.delete(id);
+    const result = await db.delete(tasks).where(eq(tasks.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Activities
   async getActivitiesByContactId(contactId: number): Promise<Activity[]> {
-    return Array.from(this.activities.values())
-      .filter(activity => activity.contactId === contactId)
-      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    return await db.select().from(activities)
+      .where(eq(activities.contactId, contactId))
+      .orderBy(activities.createdAt);
   }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
-    const id = this.currentActivityId++;
-    const activity: Activity = {
-      ...insertActivity,
-      id,
-      createdAt: new Date(),
-    };
-    this.activities.set(id, activity);
+    const [activity] = await db
+      .insert(activities)
+      .values(insertActivity)
+      .returning();
     return activity;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

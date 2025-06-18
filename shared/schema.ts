@@ -1,9 +1,43 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  real,
+  jsonb,
+  index,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for Replit Auth
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
@@ -17,14 +51,14 @@ export const contacts = pgTable("contacts", {
 
 export const notes = pgTable("notes", {
   id: serial("id").primaryKey(),
-  contactId: integer("contact_id").notNull(),
+  contactId: integer("contact_id").notNull().references(() => contacts.id),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
-  contactId: integer("contact_id").notNull(),
+  contactId: integer("contact_id").notNull().references(() => contacts.id),
   title: text("title").notNull(),
   completed: boolean("completed").default(false),
   dueDate: timestamp("due_date"),
@@ -33,7 +67,7 @@ export const tasks = pgTable("tasks", {
 
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
-  contactId: integer("contact_id").notNull(),
+  contactId: integer("contact_id").notNull().references(() => contacts.id),
   type: text("type").notNull(), // status_change, call, email, note_added, task_completed
   description: text("description").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -41,6 +75,7 @@ export const activities = pgTable("activities", {
 
 export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -60,6 +95,8 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
   createdAt: true,
 });
 
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Note = typeof notes.$inferSelect;

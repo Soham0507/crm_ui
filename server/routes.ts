@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertContactSchema, insertNoteSchema, insertTaskSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -11,10 +12,26 @@ import fs from "fs";
 const upload = multer({ dest: 'uploads/' });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all contacts
-  app.get("/api/contacts", async (req, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const contacts = await storage.getContacts();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get all contacts
+  app.get("/api/contacts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const contacts = await storage.getContacts(userId);
       res.json(contacts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contacts" });
@@ -22,10 +39,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get contact with details
-  app.get("/api/contacts/:id", async (req, res) => {
+  app.get("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const contact = await storage.getContactWithDetails(id);
+      const userId = req.user.claims.sub;
+      const contact = await storage.getContactWithDetails(id, userId);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -36,10 +54,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create contact
-  app.post("/api/contacts", async (req, res) => {
+  app.post("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertContactSchema.parse(req.body);
-      const contact = await storage.createContact(validatedData);
+      const contact = await storage.createContact(validatedData, userId);
       res.status(201).json(contact);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -50,11 +69,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update contact
-  app.patch("/api/contacts/:id", async (req, res) => {
+  app.patch("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
       const validatedData = insertContactSchema.partial().parse(req.body);
-      const contact = await storage.updateContact(id, validatedData);
+      const contact = await storage.updateContact(id, validatedData, userId);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -68,10 +88,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete contact
-  app.delete("/api/contacts/:id", async (req, res) => {
+  app.delete("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteContact(id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteContact(id, userId);
       if (!deleted) {
         return res.status(404).json({ message: "Contact not found" });
       }
@@ -130,9 +151,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get pipeline stats
-  app.get("/api/pipeline/stats", async (req, res) => {
+  app.get("/api/pipeline/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const contacts = await storage.getContacts();
+      const userId = req.user.claims.sub;
+      const contacts = await storage.getContacts(userId);
       const stats = {
         totalContacts: contacts.length,
         activeDeals: contacts.filter(c => !['closed-won', 'closed-lost'].includes(c.status)).length,
@@ -163,9 +185,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export contacts as CSV
-  app.get("/api/contacts/export", async (req, res) => {
+  app.get("/api/contacts/export", isAuthenticated, async (req: any, res) => {
     try {
-      const contacts = await storage.getContacts();
+      const userId = req.user.claims.sub;
+      const contacts = await storage.getContacts(userId);
       const fields = ['name', 'email', 'phone', 'company', 'status', 'dealValue', 'tags'];
       const json2csvParser = new Parser({ fields });
       const csv = json2csvParser.parse(contacts);
@@ -179,12 +202,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Import contacts from CSV
-  app.post("/api/contacts/import", upload.single('file'), async (req, res) => {
+  app.post("/api/contacts/import", isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
+      const userId = req.user.claims.sub;
       const results: any[] = [];
       const errors: string[] = [];
       let processed = 0;
@@ -221,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const contactData of results) {
             try {
               const validatedData = insertContactSchema.parse(contactData);
-              await storage.createContact(validatedData);
+              await storage.createContact(validatedData, userId);
               created++;
             } catch (error) {
               errors.push(`Failed to create contact: ${contactData.name}`);
