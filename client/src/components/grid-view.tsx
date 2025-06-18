@@ -13,20 +13,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatCurrency, getStatusColor, getStatusLabel, formatPhone } from "@/lib/utils";
+import { formatCurrency, getStatusColor, getStatusLabel, formatPhone, formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Contact } from "@shared/schema";
+import type { TableSettings } from "@/components/table-settings-modal";
 
 interface GridViewProps {
   contacts: Contact[];
   onContactSelect: (id: number) => void;
+  tableSettings: TableSettings;
 }
 
-export default function GridView({ contacts, onContactSelect }: GridViewProps) {
+export default function GridView({ contacts, onContactSelect, tableSettings }: GridViewProps) {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = tableSettings.pageSize;
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -100,19 +102,24 @@ export default function GridView({ contacts, onContactSelect }: GridViewProps) {
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="min-w-[250px]">Name & Company</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Deal Value</TableHead>
-                <TableHead>Tags</TableHead>
+                {tableSettings.columns.filter(col => col.visible).map((column) => (
+                  <TableHead 
+                    key={column.key}
+                    className={
+                      column.key === 'name' ? 'min-w-[250px]' :
+                      column.key === 'actions' ? 'w-20' : ''
+                    }
+                  >
+                    {column.label}
+                  </TableHead>
+                ))}
                 <TableHead className="w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentContacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={tableSettings.columns.filter(col => col.visible).length + 2} className="text-center py-12 text-gray-500">
                     No contacts found. Add your first contact to get started.
                   </TableCell>
                 </TableRow>
@@ -131,45 +138,65 @@ export default function GridView({ contacts, onContactSelect }: GridViewProps) {
                         }
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
-                            {getInitials(contact.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-gray-900">{contact.name}</div>
-                          <div className="text-sm text-gray-500">{contact.company}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(contact.status)}>
-                        {getStatusLabel(contact.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-900">{contact.email}</TableCell>
-                    <TableCell className="text-gray-900">
-                      {contact.phone ? formatPhone(contact.phone) : '-'}
-                    </TableCell>
-                    <TableCell className="font-medium text-gray-900">
-                      {formatCurrency(contact.dealValue || 0)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {contact.tags?.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {(contact.tags?.length || 0) > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{(contact.tags?.length || 0) - 2}
+                    {tableSettings.columns.filter(col => col.visible).map((column) => (
+                      <TableCell key={column.key}>
+                        {column.key === 'name' && (
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                                {getInitials(contact.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">{contact.name}</div>
+                              <div className="text-sm text-gray-500">{contact.company}</div>
+                            </div>
+                          </div>
+                        )}
+                        {column.key === 'status' && (
+                          <Badge className={getStatusColor(contact.status)}>
+                            {getStatusLabel(contact.status)}
                           </Badge>
                         )}
-                      </div>
-                    </TableCell>
+                        {column.key === 'email' && (
+                          <span className="text-gray-900">{contact.email}</span>
+                        )}
+                        {column.key === 'phone' && (
+                          <span className="text-gray-900">
+                            {contact.phone ? formatPhone(contact.phone) : '-'}
+                          </span>
+                        )}
+                        {column.key === 'dealValue' && (
+                          <span className="font-medium text-gray-900">
+                            {formatCurrency(contact.dealValue || 0)}
+                          </span>
+                        )}
+                        {column.key === 'tags' && (
+                          <div className="flex flex-wrap gap-1">
+                            {contact.tags?.slice(0, 2).map((tag, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {(contact.tags?.length || 0) > 2 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{(contact.tags?.length || 0) - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        {column.key === 'createdAt' && (
+                          <span className="text-sm text-gray-500">
+                            {formatDate(contact.createdAt!)}
+                          </span>
+                        )}
+                        {column.key === 'updatedAt' && (
+                          <span className="text-sm text-gray-500">
+                            {formatDate(contact.updatedAt!)}
+                          </span>
+                        )}
+                      </TableCell>
+                    ))}
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center space-x-1">
                         <Button
