@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertContactSchema, insertNoteSchema, insertTaskSchema } from "@shared/schema";
+import { generateContactInsights, generateBulkInsights } from "./aiInsights";
 import { z } from "zod";
 import multer from "multer";
 import csvParser from "csv-parser";
@@ -426,6 +427,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting custom table record:", error);
       res.status(500).json({ message: "Failed to delete custom table record" });
+    }
+  });
+
+  // AI Insights routes
+  app.get("/api/contacts/:id/insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      const contact = await storage.getContactWithDetails(contactId, userId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const insights = await generateContactInsights(contact);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating contact insights:", error);
+      res.status(500).json({ message: "Failed to generate insights" });
+    }
+  });
+
+  app.get("/api/pipeline/insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const contacts = await storage.getContacts(userId);
+      
+      const insights = await generateBulkInsights(contacts);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating pipeline insights:", error);
+      res.status(500).json({ message: "Failed to generate pipeline insights" });
     }
   });
 

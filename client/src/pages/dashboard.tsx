@@ -9,6 +9,7 @@ import AddContactModal from "@/components/add-contact-modal";
 import ImportHelpModal from "@/components/import-help-modal";
 import TableSettingsModal, { type TableSettings } from "@/components/table-settings-modal";
 import AdvancedFilters, { type FilterCriteria } from "@/components/advanced-filters";
+import AIInsightsPanel from "@/components/ai-insights-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
