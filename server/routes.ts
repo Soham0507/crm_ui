@@ -214,60 +214,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let processed = 0;
       let created = 0;
 
-      fs.createReadStream(req.file.path)
+      // Process CSV file
+      const stream = fs.createReadStream(req.file.path)
         .pipe(csvParser())
         .on('data', (data) => {
           processed++;
           try {
-            // Clean and validate data
+            // Clean and validate data with multiple column name variations
             const contactData = {
-              name: data.name || data.Name || '',
-              email: data.email || data.Email || '',
-              phone: data.phone || data.Phone || '',
-              company: data.company || data.Company || '',
-              status: (data.status || data.Status || 'lead').toLowerCase(),
-              dealValue: parseFloat(data.dealValue || data['Deal Value'] || data.dealvalue || '0') || 0,
-              tags: data.tags ? data.tags.split(',').map((tag: string) => tag.trim()) : []
+              name: data.name || data.Name || data.NAME || '',
+              email: data.email || data.Email || data.EMAIL || '',
+              phone: data.phone || data.Phone || data.PHONE || '',
+              company: data.company || data.Company || data.COMPANY || '',
+              status: (data.status || data.Status || data.STATUS || 'lead').toLowerCase(),
+              dealValue: parseFloat(data.dealValue || data['Deal Value'] || data.dealvalue || data.DEALVALUE || '0') || 0,
+              tags: data.tags || data.Tags || data.TAGS ? 
+                (data.tags || data.Tags || data.TAGS).split(/[,;]/).map((tag: string) => tag.trim()).filter(Boolean) : 
+                []
             };
 
-            if (!contactData.name || !contactData.email) {
-              errors.push(`Row ${processed}: Name and email are required`);
+            // Validate required fields
+            if (!contactData.name.trim()) {
+              errors.push(`Row ${processed}: Name is required`);
               return;
+            }
+            if (!contactData.email.trim()) {
+              errors.push(`Row ${processed}: Email is required`);
+              return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(contactData.email)) {
+              errors.push(`Row ${processed}: Invalid email format`);
+              return;
+            }
+
+            // Validate status
+            const validStatuses = ['lead', 'qualified', 'proposal', 'negotiation', 'closed-won', 'closed-lost'];
+            if (!validStatuses.includes(contactData.status)) {
+              contactData.status = 'lead'; // Default to lead if invalid
             }
 
             results.push(contactData);
           } catch (error) {
-            errors.push(`Row ${processed}: Invalid data format`);
+            errors.push(`Row ${processed}: Invalid data format - ${error}`);
           }
         })
         .on('end', async () => {
-          // Process valid contacts
-          for (const contactData of results) {
-            try {
-              const validatedData = insertContactSchema.parse(contactData);
-              await storage.createContact(validatedData, userId);
-              created++;
-            } catch (error) {
-              errors.push(`Failed to create contact: ${contactData.name}`);
+          try {
+            // Process valid contacts
+            for (const contactData of results) {
+              try {
+                const validatedData = insertContactSchema.parse(contactData);
+                await storage.createContact(validatedData, userId);
+                created++;
+              } catch (error) {
+                console.error('Failed to create contact:', error);
+                errors.push(`Failed to create contact: ${contactData.name} - ${error}`);
+              }
             }
+
+            // Clean up uploaded file
+            if (fs.existsSync(req.file!.path)) {
+              fs.unlinkSync(req.file!.path);
+            }
+
+            const response = {
+              processed,
+              created,
+              errors: errors.length > 0 ? errors : undefined,
+              message: `Successfully imported ${created} out of ${processed} contacts${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+            };
+
+            console.log('Import result:', response);
+            res.json(response);
+          } catch (error) {
+            console.error('Error processing import:', error);
+            res.status(500).json({ message: "Failed to process import", error: error.toString() });
           }
-
-          // Clean up uploaded file
-          fs.unlinkSync(req.file!.path);
-
-          res.json({
-            processed,
-            created,
-            errors: errors.length > 0 ? errors : undefined,
-            message: `Successfully imported ${created} out of ${processed} contacts`
-          });
         })
         .on('error', (error) => {
-          errors.push('Failed to parse CSV file');
+          console.error('CSV parsing error:', error);
+          errors.push('Failed to parse CSV file: ' + error.message);
           res.status(400).json({ message: "Invalid CSV file", errors });
         });
+
     } catch (error) {
-      res.status(500).json({ message: "Failed to import contacts" });
+      console.error('Import error:', error);
+      res.status(500).json({ message: "Failed to import contacts", error: error.toString() });
     }
   });
 
