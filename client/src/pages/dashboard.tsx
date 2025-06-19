@@ -133,7 +133,17 @@ export default function Dashboard() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/contacts/export');
+      const response = await fetch('/api/contacts/export', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'text/csv',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status}`);
+      }
+      
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -143,8 +153,18 @@ export default function Dashboard() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      toast({
+        title: "Export completed",
+        description: "Contacts have been exported successfully.",
+      });
     } catch (error) {
       console.error('Export failed:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export contacts. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -155,9 +175,11 @@ export default function Dashboard() {
       const response = await fetch('/api/contacts/import', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ message: 'Import failed' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       return response.json();
     },

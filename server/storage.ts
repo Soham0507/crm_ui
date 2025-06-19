@@ -4,6 +4,8 @@ import {
   tasks, 
   activities,
   users,
+  customTables,
+  customTableRecords,
   type Contact, 
   type InsertContact,
   type Note,
@@ -14,7 +16,12 @@ import {
   type InsertActivity,
   type ContactWithDetails,
   type User,
-  type UpsertUser
+  type UpsertUser,
+  type CustomTable,
+  type InsertCustomTable,
+  type CustomTableRecord,
+  type InsertCustomTableRecord,
+  type CustomTableWithRecords
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";

@@ -1,0 +1,5 @@
+name,email,phone,company,status,dealValue,tags
+John Doe,john@example.com,+1-555-0123,Acme Corp,qualified,5000,enterprise;high-priority
+Jane Smith,jane@techstart.com,+1-555-0124,TechStart,lead,2500,startup;potential
+Bob Wilson,bob@wilson.com,+1-555-0125,Wilson LLC,proposal,15000,consulting;urgent
+Alice Brown,alice@innovate.com,+1-555-0126,Innovate Inc,negotiation,8000,technology;medium-priority
