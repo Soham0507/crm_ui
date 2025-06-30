@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertContactSchema.parse(req.body);
       const contact = await storage.createContact(validatedData, userId);
       res.status(201).json(contact);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
       }
@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
       res.json(contact);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
       }
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(table);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating custom table:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid table data", errors: error.errors });
