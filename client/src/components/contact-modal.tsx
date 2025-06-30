@@ -404,13 +404,16 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
           </div>
         </div>
 
+        {/* AI Insights Section */}
+        <div className="pt-6 border-t border-gray-200">
+          <h4 className="text-lg font-medium text-gray-900 mb-4">AI Insights</h4>
+          <AIInsightsPanel contactId={contactId} />
+        </div>
+
         {/* Modal Footer */}
         <div className="pt-6 border-t border-gray-200 flex justify-end space-x-3">
           <Button variant="outline" onClick={onClose}>
             Close
-          </Button>
-          <Button>
-            Save Changes
           </Button>
         </div>
       </DialogContent>
