@@ -34,12 +34,22 @@ import {
 import { formatCurrency, formatRelativeDate, getStatusColor, getStatusLabel, formatPhone } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import AIInsightsPanel from "@/components/ai-insights-panel";
 import type { ContactWithDetails } from "@shared/schema";
 
 interface ContactModalProps {
   contactId: number;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 export default function ContactModal({ contactId, isOpen, onClose }: ContactModalProps) {

@@ -355,19 +355,29 @@ export default function Dashboard() {
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
-          {currentView === 'grid' ? (
-            <GridView 
-              contacts={filteredContacts} 
-              onContactSelect={setSelectedContactId}
-              tableSettings={tableSettings}
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 overflow-auto bg-gray-50">
+            {currentView === 'grid' ? (
+              <GridView 
+                contacts={filteredContacts} 
+                onContactSelect={setSelectedContactId}
+                tableSettings={tableSettings}
+              />
+            ) : (
+              <PipelineView 
+                contacts={filteredContacts}
+                onContactSelect={setSelectedContactId}
+              />
+            )}
+          </div>
+
+          {/* AI Insights Sidebar */}
+          <div className="w-80 border-l border-gray-200 bg-white overflow-auto">
+            <AIInsightsPanel 
+              contactId={selectedContactId || undefined}
+              className="h-full"
             />
-          ) : (
-            <PipelineView 
-              contacts={filteredContacts}
-              onContactSelect={setSelectedContactId}
-            />
-          )}
+          </div>
         </div>
       </div>
 
