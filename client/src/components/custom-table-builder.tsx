@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -66,20 +66,32 @@ export default function CustomTableBuilder({
   onSave,
   initialData
 }: CustomTableBuilderProps) {
-  const [tableName, setTableName] = useState(initialData?.tableName || '');
-  const [displayName, setDisplayName] = useState(initialData?.displayName || '');
-  const [columns, setColumns] = useState<TableColumn[]>(
-    initialData?.schema.columns || [
-      { id: uuidv4(), name: 'Name', type: 'text', required: true }
-    ]
-  );
-  const [settings, setSettings] = useState(
-    initialData?.schema.settings || {
-      allowAdd: true,
-      allowEdit: true,
-      allowDelete: true,
+  const [tableName, setTableName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [columns, setColumns] = useState<TableColumn[]>([
+    { id: uuidv4(), name: 'Name', type: 'text', required: true }
+  ]);
+  const [settings, setSettings] = useState({
+    allowAdd: true,
+    allowEdit: true,
+    allowDelete: true,
+  });
+
+  // Reset form when modal opens/closes or initialData changes
+  React.useEffect(() => {
+    if (isOpen) {
+      setTableName(initialData?.tableName || '');
+      setDisplayName(initialData?.displayName || '');
+      setColumns(initialData?.schema.columns || [
+        { id: uuidv4(), name: 'Name', type: 'text', required: true }
+      ]);
+      setSettings(initialData?.schema.settings || {
+        allowAdd: true,
+        allowEdit: true,
+        allowDelete: true,
+      });
     }
-  );
+  }, [isOpen, initialData]);
 
   const addColumn = () => {
     const newColumn: TableColumn = {
