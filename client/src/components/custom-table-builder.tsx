@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -78,7 +78,7 @@ export default function CustomTableBuilder({
   });
 
   // Reset form when modal opens/closes or initialData changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setTableName(initialData?.tableName || '');
       setDisplayName(initialData?.displayName || '');

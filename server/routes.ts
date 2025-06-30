@@ -353,25 +353,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const tableId = parseInt(req.params.id);
       
-      // Validate the schema if it's being updated
-      if (req.body.schema) {
-        const validatedData = insertCustomTableSchema.partial().parse(req.body);
-        const table = await storage.updateCustomTable(tableId, validatedData, userId);
-        
-        if (!table) {
-          return res.status(404).json({ message: "Table not found" });
-        }
-        
-        res.json(table);
-      } else {
-        const table = await storage.updateCustomTable(tableId, req.body, userId);
-        
-        if (!table) {
-          return res.status(404).json({ message: "Table not found" });
-        }
-        
-        res.json(table);
+      const validatedData = insertCustomTableSchema.partial().parse(req.body);
+      const table = await storage.updateCustomTable(tableId, validatedData, userId);
+      
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
       }
+      
+      res.json(table);
     } catch (error) {
       console.error("Error updating custom table:", error);
       if (error instanceof z.ZodError) {

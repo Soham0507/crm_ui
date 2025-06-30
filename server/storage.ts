@@ -293,12 +293,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCustomTable(id: number, updateData: Partial<InsertCustomTable>, userId: string): Promise<CustomTable | undefined> {
-    const [table] = await db
-      .update(customTables)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(customTables.id, id), eq(customTables.userId, userId)))
-      .returning();
-    return table;
+    try {
+      console.log("Updating custom table:", { id, userId, updateData });
+      const [table] = await db
+        .update(customTables)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(and(eq(customTables.id, id), eq(customTables.userId, userId)))
+        .returning();
+      console.log("Updated table:", table);
+      return table;
+    } catch (error) {
+      console.error("Error in updateCustomTable:", error);
+      throw error;
+    }
   }
 
   async deleteCustomTable(id: number, userId: string): Promise<boolean> {
