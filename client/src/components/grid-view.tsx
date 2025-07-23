@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Trash2, ChevronLeft, ChevronRight, AlertCircle, Clock, TrendingUp } from "lucide-react";
+import { Edit, Trash2, ChevronLeft, ChevronRight, AlertCircle, Clock, TrendingUp, Plus, Settings } from "lucide-react";
 import { formatCurrency, getStatusColor, getStatusLabel, formatPhone, formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

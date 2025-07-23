@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -55,6 +55,8 @@ function getInitials(name: string): string {
 export default function ContactModal({ contactId, isOpen, onClose }: ContactModalProps) {
   const [newNote, setNewNote] = useState("");
   const [newTask, setNewTask] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContact, setEditedContact] = useState<Partial<ContactWithDetails>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -62,6 +64,20 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
     queryKey: ['/api/contacts', contactId],
     enabled: isOpen && !!contactId,
   });
+
+  // Initialize edit form when contact data loads
+  React.useEffect(() => {
+    if (contact && !isEditing) {
+      setEditedContact({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        company: contact.company,
+        dealValue: contact.dealValue,
+        status: contact.status
+      });
+    }
+  }, [contact, isEditing]);
 
   const addNoteMutation = useMutation({
     mutationFn: (content: string) =>
@@ -138,6 +154,45 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
     updateTaskMutation.mutate({ taskId, completed });
   };
 
+  const updateContactMutation = useMutation({
+    mutationFn: (data: Partial<ContactWithDetails>) =>
+      apiRequest('PATCH', `/api/contacts/${contactId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      setIsEditing(false);
+      toast({
+        title: "Contact updated",
+        description: "Contact has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveContact = () => {
+    updateContactMutation.mutate(editedContact);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (contact) {
+      setEditedContact({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        company: contact.company,
+        dealValue: contact.dealValue,
+        status: contact.status
+      });
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -199,9 +254,26 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
                 <p className="text-sm text-gray-500">{contact.company}</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {!isEditing ? (
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSaveContact} disabled={updateContactMutation.isPending}>
+                    Save
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -214,48 +286,99 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Mail className="h-4 w-4 text-gray-400" />
-                  <div>
+                  <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <div className="mt-1 text-sm text-gray-900">{contact.email}</div>
+                    {isEditing ? (
+                      <Input
+                        type="email"
+                        value={editedContact.email || ''}
+                        onChange={(e) => setEditedContact(prev => ({ ...prev, email: e.target.value }))}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <div className="mt-1 text-sm text-gray-900">{contact.email}</div>
+                    )}
                   </div>
                 </div>
                 
-                {contact.phone && (
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Phone</label>
-                      <div className="mt-1 text-sm text-gray-900">{formatPhone(contact.phone)}</div>
-                    </div>
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700">Phone</label>
+                    {isEditing ? (
+                      <Input
+                        type="tel"
+                        value={editedContact.phone || ''}
+                        onChange={(e) => setEditedContact(prev => ({ ...prev, phone: e.target.value }))}
+                        className="mt-1"
+                        placeholder="Phone number"
+                      />
+                    ) : (
+                      <div className="mt-1 text-sm text-gray-900">{contact.phone ? formatPhone(contact.phone) : 'No phone'}</div>
+                    )}
                   </div>
-                )}
+                </div>
                 
-                {contact.company && (
-                  <div className="flex items-center space-x-3">
-                    <Building className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Company</label>
-                      <div className="mt-1 text-sm text-gray-900">{contact.company}</div>
-                    </div>
+                <div className="flex items-center space-x-3">
+                  <Building className="h-4 w-4 text-gray-400" />
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700">Company</label>
+                    {isEditing ? (
+                      <Input
+                        value={editedContact.company || ''}
+                        onChange={(e) => setEditedContact(prev => ({ ...prev, company: e.target.value }))}
+                        className="mt-1"
+                        placeholder="Company name"
+                      />
+                    ) : (
+                      <div className="mt-1 text-sm text-gray-900">{contact.company || 'No company'}</div>
+                    )}
                   </div>
-                )}
+                </div>
                 
                 <div className="flex items-center space-x-3">
                   <DollarSign className="h-4 w-4 text-gray-400" />
-                  <div>
+                  <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700">Deal Value</label>
-                    <div className="mt-1 text-sm font-semibold text-gray-900">
-                      {formatCurrency(contact.dealValue || 0)}
-                    </div>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={editedContact.dealValue || 0}
+                        onChange={(e) => setEditedContact(prev => ({ ...prev, dealValue: Number(e.target.value) }))}
+                        className="mt-1"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <div className="mt-1 text-sm font-semibold text-gray-900">
+                        {formatCurrency(contact.dealValue || 0)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <div className="mt-1">
-                    <Badge className={getStatusColor(contact.status)}>
-                      {getStatusLabel(contact.status)}
-                    </Badge>
+                    {isEditing ? (
+                      <Select
+                        value={editedContact.status || contact.status}
+                        onValueChange={(value) => setEditedContact(prev => ({ ...prev, status: value as any }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lead">Lead</SelectItem>
+                          <SelectItem value="prospect">Prospect</SelectItem>
+                          <SelectItem value="customer">Customer</SelectItem>
+                          <SelectItem value="churned">Churned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge className={getStatusColor(contact.status)}>
+                        {getStatusLabel(contact.status)}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 

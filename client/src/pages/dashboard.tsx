@@ -10,6 +10,7 @@ import ImportHelpModal from "@/components/import-help-modal";
 import TableSettingsModal, { type TableSettings } from "@/components/table-settings-modal";
 import AdvancedFilters, { type FilterCriteria } from "@/components/advanced-filters";
 import AIInsightsPanel from "@/components/ai-insights-panel";
+import DynamicColumnBuilder from "@/components/dynamic-column-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
   Download, 
   Upload, 
   Plus,
+  Columns,
   Users,
   TrendingUp,
   HelpCircle,
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const [showImportHelp, setShowImportHelp] = useState(false);
   const [showTableSettings, setShowTableSettings] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showColumnBuilder, setShowColumnBuilder] = useState(false);
   const [filters, setFilters] = useState<FilterCriteria>({
     search: '',
     statuses: [],
@@ -66,15 +69,15 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: contacts = [], isLoading } = useQuery({
+  const { data: contacts = [], isLoading } = useQuery<Contact[]>({
     queryKey: ['/api/contacts'],
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats = {} } = useQuery<any>({
     queryKey: ['/api/pipeline/stats'],
   });
 
-  const filteredContacts = contacts.filter((contact: Contact) => {
+  const filteredContacts = contacts.filter((contact) => {
     // Basic search
     if (filters.search) {
       const query = filters.search.toLowerCase();
@@ -233,6 +236,33 @@ export default function Dashboard() {
     });
   };
 
+  const handleColumnSave = (column: any) => {
+    // In a real app, this would save the column configuration to the database
+    const newColumn = {
+      key: column.name.toLowerCase().replace(/\s+/g, '_'),
+      label: column.name,
+      visible: true,
+      type: column.type,
+      options: column.options,
+      defaultValue: column.defaultValue,
+    };
+
+    const updatedSettings = {
+      ...tableSettings,
+      columns: [...tableSettings.columns, newColumn],
+    };
+
+    setTableSettings(updatedSettings);
+    if (updatedSettings.autoSave) {
+      localStorage.setItem('crm-table-settings', JSON.stringify(updatedSettings));
+    }
+
+    toast({
+      title: "Column added",
+      description: `Added ${column.name} column to your table.`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -272,6 +302,14 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center space-x-3">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => setShowColumnBuilder(true)}
+                >
+                  <Columns className="h-4 w-4 mr-2" />
+                  Add Column
+                </Button>
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -359,13 +397,13 @@ export default function Dashboard() {
           <div className="flex-1 overflow-auto bg-gray-50">
             {currentView === 'grid' ? (
               <GridView 
-                contacts={filteredContacts} 
+                contacts={filteredContacts as Contact[]} 
                 onContactSelect={setSelectedContactId}
                 tableSettings={tableSettings}
               />
             ) : (
               <PipelineView 
-                contacts={filteredContacts}
+                contacts={filteredContacts as Contact[]}
                 onContactSelect={setSelectedContactId}
               />
             )}
@@ -420,6 +458,14 @@ export default function Dashboard() {
           filters={filters}
           onFiltersChange={setFilters}
           contacts={contacts}
+        />
+      )}
+
+      {showColumnBuilder && (
+        <DynamicColumnBuilder
+          isOpen={showColumnBuilder}
+          onClose={() => setShowColumnBuilder(false)}
+          onSave={handleColumnSave}
         />
       )}
     </div>

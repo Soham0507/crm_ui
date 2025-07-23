@@ -15,7 +15,8 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ const categoryColors = {
 };
 
 export default function AIInsightsPanel({ contactId, className }: AIInsightsPanelProps) {
+  const [isVisible, setIsVisible] = useState(true);
   const [expanded, setExpanded] = useState(true);
 
   const { data: contactInsights, isLoading: isLoadingContact } = useQuery({
@@ -120,6 +122,22 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
     );
   }
 
+  if (!isVisible) {
+    return (
+      <div className={cn("", className)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsVisible(true)}
+          className="w-full justify-start"
+        >
+          <Brain className="h-4 w-4 mr-2" />
+          Show AI Insights
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Card className={cn("", className)}>
       <CardHeader>
@@ -130,13 +148,22 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
               AI Insights {contactId ? "- Contact" : "- Pipeline"}
             </CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsVisible(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         {contactId && insights && (
           <CardDescription>
