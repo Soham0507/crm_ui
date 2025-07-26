@@ -62,7 +62,7 @@ export default function Dashboard() {
         { key: 'createdAt', label: 'Created Date', visible: false },
         { key: 'updatedAt', label: 'Updated Date', visible: false },
       ],
-      pageSize: 10,
+      pageSize: 50,
       autoSave: true,
     };
   });

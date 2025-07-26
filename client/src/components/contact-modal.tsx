@@ -29,7 +29,8 @@ import {
   CheckCircle,
   Clock,
   MessageSquare,
-  Calendar
+  Calendar,
+  Edit
 } from "lucide-react";
 import { formatCurrency, formatRelativeDate, getStatusColor, getStatusLabel, formatPhone } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -455,7 +456,7 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
                       }`}
                     >
                       <Checkbox
-                        checked={task.completed}
+                        checked={task.completed || false}
                         onCheckedChange={(checked) => 
                           handleTaskToggle(task.id, checked as boolean)
                         }
