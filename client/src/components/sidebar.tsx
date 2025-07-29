@@ -12,6 +12,7 @@ import {
   LogOut,
   Database
 } from "lucide-react";
+import requisorLogo from "@assets/Requisor Logo_1753816063994.png";
 
 interface SidebarProps {
   currentView: 'grid' | 'pipeline';
@@ -36,10 +37,12 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
       {/* Logo & Brand */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="ml-3 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CRM Pro</h1>
+          <img 
+            src={requisorLogo} 
+            alt="Requisor" 
+            className="w-8 h-8 object-contain"
+          />
+          <h1 className="ml-3 text-xl font-bold requisor-turquoise">Requisor CRM</h1>
         </div>
       </div>
 
@@ -56,8 +59,8 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
               className={cn(
                 "w-full justify-start",
                 currentView === 'grid' 
-                  ? "text-blue-600 bg-blue-50 hover:bg-blue-50" 
-                  : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                  ? "requisor-turquoise bg-requisor-light hover:bg-requisor-light" 
+                  : "text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
               )}
               onClick={() => onViewChange('grid')}
             >
@@ -70,8 +73,8 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
               className={cn(
                 "w-full justify-start",
                 currentView === 'pipeline' 
-                  ? "text-blue-600 bg-blue-50 hover:bg-blue-50" 
-                  : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                  ? "requisor-turquoise bg-requisor-light hover:bg-requisor-light" 
+                  : "text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
               )}
               onClick={() => onViewChange('pipeline')}
             >

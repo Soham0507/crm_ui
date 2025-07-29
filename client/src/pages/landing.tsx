@@ -16,6 +16,7 @@ import {
   Mail,
   Phone
 } from "lucide-react";
+import requisorLogo from "@assets/Requisor Logo_1753816063994.png";
 
 export default function Landing() {
   const features = [
@@ -60,22 +61,24 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-requisor-subtle">
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="ml-3 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                CRM Pro
+              <img 
+                src={requisorLogo} 
+                alt="Requisor" 
+                className="w-10 h-10 object-contain"
+              />
+              <h1 className="ml-3 text-xl font-bold requisor-turquoise">
+                Requisor CRM
               </h1>
             </div>
             <Button 
               onClick={() => window.location.href = '/api/login'}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
             >
               Sign In
             </Button>
@@ -86,14 +89,14 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="pt-20 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200">
-            ✨ Modern CRM Platform
+          <Badge className="mb-6 bg-requisor-light text-requisor-turquoise border-requisor-turquoise/20">
+            ✨ Requisor CRM Platform
           </Badge>
           
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
             Supercharge Your
             <br />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="requisor-turquoise">
               Sales Pipeline
             </span>
           </h1>
@@ -107,7 +110,7 @@ export default function Landing() {
             <Button 
               size="lg"
               onClick={() => window.location.href = '/api/login'}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6"
+              className="bg-requisor-gradient hover:bg-requisor-turquoise/90 text-lg px-8 py-6"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />

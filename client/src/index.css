@@ -13,7 +13,7 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
+  --primary: hsl(174, 86%, 55%);
   --primary-foreground: hsl(211, 100%, 99%);
   --secondary: hsl(60, 4.8%, 95.9%);
   --secondary-foreground: hsl(24, 9.8%, 10%);
@@ -24,8 +24,10 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
   
-  /* CRM specific colors */
-  --crm-blue: hsl(207, 90%, 54%);
+  /* Requisor brand colors */
+  --requisor-turquoise: hsl(174, 86%, 55%);
+  --requisor-dark: hsl(190, 100%, 10%);
+  --requisor-light: hsl(174, 50%, 96%);
   --crm-gray: hsl(210, 4%, 42%);
   --crm-success: hsl(148, 69%, 47%);
   --crm-warning: hsl(41, 96%, 50%);
@@ -43,7 +45,7 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
+  --primary: hsl(174, 86%, 55%);
   --primary-foreground: hsl(211, 100%, 99%);
   --secondary: hsl(240, 3.7%, 15.9%);
   --secondary-foreground: hsl(0, 0%, 98%);
@@ -67,16 +69,24 @@
 }
 
 @layer utilities {
-  .crm-blue {
-    color: var(--crm-blue);
+  .requisor-turquoise {
+    color: var(--requisor-turquoise);
   }
   
-  .bg-crm-blue {
-    background-color: var(--crm-blue);
+  .bg-requisor-turquoise {
+    background-color: var(--requisor-turquoise);
   }
   
-  .border-crm-blue {
-    border-color: var(--crm-blue);
+  .border-requisor-turquoise {
+    border-color: var(--requisor-turquoise);
+  }
+  
+  .bg-requisor-gradient {
+    background: linear-gradient(135deg, var(--requisor-turquoise) 0%, hsl(174, 76%, 45%) 100%);
+  }
+  
+  .bg-requisor-subtle {
+    background: linear-gradient(135deg, var(--requisor-light) 0%, hsl(174, 30%, 98%) 100%);
   }
   
   .text-crm-gray {

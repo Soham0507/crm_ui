@@ -288,13 +288,13 @@ export default function Dashboard() {
                   {currentView === 'grid' ? 'Grid View' : 'Pipeline View'}
                 </h2>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    <div className="w-1.5 h-1.5 mr-1.5 bg-green-400 rounded-full"></div>
+                  <Badge variant="secondary" className="bg-requisor-light text-requisor-turquoise">
+                    <div className="w-1.5 h-1.5 mr-1.5 bg-requisor-turquoise rounded-full"></div>
                     <Users className="h-3 w-3 mr-1" />
                     {stats?.totalContacts || 0} Contacts
                   </Badge>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    <div className="w-1.5 h-1.5 mr-1.5 bg-blue-400 rounded-full"></div>
+                  <Badge variant="secondary" className="bg-requisor-light text-requisor-turquoise">
+                    <div className="w-1.5 h-1.5 mr-1.5 bg-requisor-turquoise rounded-full"></div>
                     <TrendingUp className="h-3 w-3 mr-1" />
                     {stats?.activeDeals || 0} Active Deals
                   </Badge>
@@ -306,6 +306,7 @@ export default function Dashboard() {
                   variant="secondary" 
                   size="sm"
                   onClick={() => setShowColumnBuilder(true)}
+                  className="border-requisor-turquoise/20 text-requisor-turquoise hover:bg-requisor-light"
                 >
                   <Columns className="h-4 w-4 mr-2" />
                   Add Column
@@ -383,7 +384,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Add Contact */}
-                <Button onClick={() => setShowAddContact(true)}>
+                <Button onClick={() => setShowAddContact(true)} className="bg-requisor-turquoise hover:bg-requisor-turquoise/90">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
