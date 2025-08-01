@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertContactSchema, insertNoteSchema, insertTaskSchema, insertCustomTableSchema, insertCustomTableRecordSchema } from "@shared/schema";
+import { insertContactSchema, insertNoteSchema, insertTaskSchema, insertCustomTableSchema, insertCustomTableRecordSchema, type CustomTableSchema } from "@shared/schema";
 import { generateContactInsights, generateBulkInsights } from "./aiInsights";
 import { z } from "zod";
 import multer from "multer";
@@ -432,6 +432,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting custom table record:", error);
       res.status(500).json({ message: "Failed to delete custom table record" });
+    }
+  });
+
+  // Export custom table as CSV
+  app.get("/api/custom-tables/:id/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.id);
+      
+      const table = await storage.getCustomTableWithRecords(tableId, userId);
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+
+      // Extract schema columns
+      const schema = table.schema as CustomTableSchema;
+      const columns = schema.columns || [];
+      
+      // Create fields array from column names
+      const fields = columns.map((col: any) => col.name);
+      
+      // Transform records data
+      const records = table.records.map(record => {
+        const data: any = {};
+        columns.forEach((col: any) => {
+          const recordData = record.data as any;
+          data[col.name] = recordData[col.name] || '';
+        });
+        return data;
+      });
+
+      const json2csvParser = new Parser({ fields });
+      const csv = json2csvParser.parse(records);
+      
+      const fileName = `${table.tableName}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      res.header('Content-Type', 'text/csv');
+      res.attachment(fileName);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting custom table:", error);
+      res.status(500).json({ message: "Failed to export custom table" });
+    }
+  });
+
+  // Import CSV to custom table
+  app.post("/api/custom-tables/:id/import", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const userId = req.user.claims.sub;
+      const tableId = parseInt(req.params.id);
+      
+      // Get table schema
+      const table = await storage.getCustomTable(tableId, userId);
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+
+      const schema = table.schema as CustomTableSchema;
+      const columns = schema.columns || [];
+      const results: any[] = [];
+      const errors: string[] = [];
+      let processed = 0;
+      let created = 0;
+
+      // Process CSV file
+      const stream = fs.createReadStream(req.file.path)
+        .pipe(csvParser())
+        .on('data', (data) => {
+          processed++;
+          try {
+            // Validate and transform data based on schema
+            const recordData: any = {};
+            let hasRequiredFields = true;
+            
+            columns.forEach((col: any) => {
+              const value = data[col.name] || data[col.displayName] || '';
+              
+              // Check required fields
+              if (col.required && !value) {
+                hasRequiredFields = false;
+                errors.push(`Row ${processed}: Missing required field "${col.displayName}"`);
+                return;
+              }
+              
+              // Type validation and conversion
+              switch (col.type) {
+                case 'number':
+                  recordData[col.name] = value ? parseFloat(value) || 0 : 0;
+                  break;
+                case 'checkbox':
+                  recordData[col.name] = value === 'true' || value === '1' || value === 'yes';
+                  break;
+                case 'date':
+                  recordData[col.name] = value ? new Date(value).toISOString() : null;
+                  break;
+                default:
+                  recordData[col.name] = value.toString();
+              }
+            });
+            
+            if (hasRequiredFields) {
+              results.push(recordData);
+            }
+          } catch (error: any) {
+            errors.push(`Row ${processed}: ${error.message}`);
+          }
+        })
+        .on('end', async () => {
+          // Clean up uploaded file
+          fs.unlinkSync(req.file!.path);
+          
+          // Insert valid records
+          for (const recordData of results) {
+            try {
+              await storage.createCustomTableRecord({
+                tableId,
+                userId,
+                data: recordData
+              });
+              created++;
+            } catch (error: any) {
+              errors.push(`Failed to create record: ${error.message}`);
+            }
+          }
+          
+          res.json({
+            success: true,
+            processed,
+            created,
+            errors,
+            message: `Imported ${created} out of ${processed} records`
+          });
+        })
+        .on('error', (error) => {
+          console.error('CSV parsing error:', error);
+          fs.unlinkSync(req.file!.path);
+          res.status(400).json({ message: "Invalid CSV file", error: error.message });
+        });
+    } catch (error) {
+      console.error('Import error:', error);
+      res.status(500).json({ message: "Failed to import custom table data" });
     }
   });
 

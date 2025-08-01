@@ -1,0 +1,113 @@
+Build Import & Export File Feature for Requisor CRM
+Objective:
+Add robust CSV/XLSX import and export capabilities to Requisor CRM so users can:
+
+Import new contacts, tasks, or deals from spreadsheets
+
+Export CRM data based on filters or full tables
+
+View upload previews, handle validation, and support rollback on bad data
+
+✅ Import File Feature
+1. 📤 Upload UI
+Allow users to upload .csv or .xlsx files
+
+Drag-and-drop or “Select File” interface
+
+Display file size + type validation (max: 10MB)
+
+Support importing to:
+
+Contacts
+
+Deals
+
+Tasks
+
+2. 🔍 Preview & Validation
+Show preview of first 5–10 rows
+
+Let user map columns if headers don’t match exactly
+
+Validate required fields:
+
+e.g., email for contacts, title for tasks
+
+Show clear errors if missing or malformed fields
+
+3. 💾 Import Processing
+On success:
+
+Parse with papaparse (CSV) or xlsx (Excel)
+
+Insert into DB
+
+Show “X records imported successfully”
+
+On fail:
+
+Option to fix and re-upload
+
+Display line-level errors (e.g., “Row 3: missing email”)
+
+✅ Export File Feature
+1. 📥 Export Button UI
+Add “Export CSV” or “Export XLSX” button on:
+
+Contacts page
+
+Tasks view
+
+Deals pipeline
+
+Support filter-based exports (e.g., “All tasks assigned to me”)
+
+2. 📁 File Structure
+Include:
+
+Column headers (e.g., Name, Email, Status, Due Date)
+
+Clean formatting (dates as YYYY-MM-DD)
+
+File download with timestamp in filename:
+
+contacts_export_2024-08-01.csv
+
+3. 📄 Export Format Options
+.csv for quick view + universal compatibility
+
+.xlsx (optional) using SheetJS or xlsx-populate for richer exports
+
+🧱 Stack Suggestions
+Feature	Tech / Tool
+CSV Parsing	papaparse (for .csv)
+XLSX Parsing	xlsx npm package (SheetJS)
+File Upload UI	react-dropzone + TailwindCSS
+Backend API	Node.js/Express or Python (FastAPI)
+Storage (optional)	Supabase storage or Replit FS
+Export Builder	json2csv, xlsx-write, or exceljs
+
+✅ Final Replit Prompt
+Replit, please build a full import/export file feature for Requisor CRM that includes:
+
+Upload of .csv or .xlsx files to import contacts, tasks, or deals
+
+File preview and validation (e.g., required fields, field type checks)
+
+On success: parse, clean, and insert data into Replit DB
+
+On error: show per-row feedback with retry option
+
+Export functionality to download filtered or full CRM data
+
+Formats: .csv (default), .xlsx (optional)
+
+Include column headers and timestamped filenames
+
+Bonus:
+
+Let users map custom column names during import
+
+Allow “undo last import” feature for admin
+
+Show total records processed after each action

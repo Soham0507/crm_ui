@@ -154,7 +154,8 @@ export type ContactWithDetails = Contact & {
 export interface TableColumn {
   id: string;
   name: string;
-  type: 'text' | 'number' | 'currency' | 'date' | 'dropdown' | 'boolean' | 'email' | 'phone';
+  displayName: string;
+  type: 'text' | 'longtext' | 'number' | 'currency' | 'date' | 'dropdown' | 'checkbox' | 'email' | 'phone' | 'url';
   required?: boolean;
   options?: string[]; // For dropdown type
   defaultValue?: any;

@@ -23,7 +23,9 @@ import {
   DollarSign,
   Check,
   X,
-  MoreVertical
+  MoreVertical,
+  Download,
+  Upload
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +88,82 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
     },
   });
 
+  const handleExport = async () => {
+    try {
+      const response = await fetch(`/api/custom-tables/${table.id}/export`, {
+        headers: {
+          'Accept': 'text/csv',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${table.tableName}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export successful",
+        description: `Table data exported to CSV file.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export table data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await fetch(`/api/custom-tables/${table.id}/import`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Import failed');
+      }
+      
+      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${table.id}`] });
+      
+      toast({
+        title: "Import successful",
+        description: result.message || `Imported ${result.created} records successfully.`,
+      });
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Import errors:', result.errors);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Import failed",
+        description: error.message || "Failed to import CSV file. Please check the file format.",
+        variant: "destructive",
+      });
+    }
+    
+    // Reset file input
+    event.target.value = '';
+  };
+
   const deleteRecordMutation = useMutation({
     mutationFn: (id: number) =>
       apiRequest('DELETE', `/api/custom-tables/${table.id}/records/${id}`),
@@ -115,7 +193,7 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
         initialData[column.id] = column.defaultValue;
       } else {
         switch (column.type) {
-          case 'boolean':
+          case 'checkbox':
             initialData[column.id] = false;
             break;
           case 'number':
@@ -164,8 +242,8 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
         return formatCurrency(value || 0);
       case 'date':
         return value ? formatDate(value) : '-';
-      case 'boolean':
-        return <Checkbox checked={Boolean(value)} readOnly />;
+      case 'checkbox':
+        return <Checkbox checked={Boolean(value)} disabled />;
       case 'dropdown':
         return value ? <Badge variant="secondary">{value}</Badge> : '-';
       case 'email':
@@ -246,7 +324,7 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
           </div>
         );
 
-      case 'boolean':
+      case 'checkbox':
         return (
           <Checkbox
             checked={Boolean(value)}
@@ -279,6 +357,27 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button 
+            variant="outline"
+            onClick={handleExport}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => document.getElementById('csv-upload')?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
+          <input
+            id="csv-upload"
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImport}
+          />
           {schema.settings?.allowAdd && (
             <Button onClick={startAddingRecord} disabled={isAddingRecord}>
               <Plus className="h-4 w-4 mr-2" />
@@ -352,7 +451,7 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
                   <TableCell key={column.id}>
                     {renderCellValue(
                       column,
-                      editingRecord === record.id ? currentData[column.id] : record.data[column.id],
+                      editingRecord === record.id ? currentData[column.id] : (record.data as any)[column.id],
                       editingRecord === record.id,
                       (value) => setCurrentData({ ...currentData, [column.id]: value })
                     )}
