@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create note
-  app.post("/api/contacts/:id/notes", async (req, res) => {
+  app.post("/api/contacts/:id/notes", isAuthenticated, async (req: any, res) => {
     try {
       const contactId = parseInt(req.params.id);
       const validatedData = insertNoteSchema.parse({ ...req.body, contactId });
@@ -119,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create task
-  app.post("/api/contacts/:id/tasks", async (req, res) => {
+  app.post("/api/contacts/:id/tasks", isAuthenticated, async (req: any, res) => {
     try {
       const contactId = parseInt(req.params.id);
       const validatedData = insertTaskSchema.parse({ ...req.body, contactId });
@@ -134,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update task
-  app.patch("/api/tasks/:id", async (req, res) => {
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTaskSchema.partial().parse(req.body);

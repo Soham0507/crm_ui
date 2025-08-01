@@ -250,7 +250,14 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
               </Avatar>
               <div>
                 <DialogTitle className="text-xl font-semibold text-gray-900">
-                  {contact.name}
+                  {isEditing ? (
+                    <Input
+                      value={editedContact.name || ''}
+                      onChange={(e) => setEditedContact(prev => ({ ...prev, name: e.target.value }))}
+                      className="text-xl font-semibold border-none p-0 h-auto bg-transparent focus:ring-0"
+                      placeholder="Contact name"
+                    />
+                  ) : contact.name}
                 </DialogTitle>
                 <p className="text-sm text-gray-500">{contact.company}</p>
               </div>
