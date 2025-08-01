@@ -42,6 +42,7 @@ interface ContactModalProps {
   contactId: number;
   isOpen: boolean;
   onClose: () => void;
+  startInEditMode?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -53,7 +54,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export default function ContactModal({ contactId, isOpen, onClose }: ContactModalProps) {
+export default function ContactModal({ contactId, isOpen, onClose, startInEditMode = false }: ContactModalProps) {
   const [newNote, setNewNote] = useState("");
   const [newTask, setNewTask] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -79,6 +80,13 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
       });
     }
   }, [contact, isEditing]);
+
+  // Start in edit mode if requested
+  React.useEffect(() => {
+    if (startInEditMode && contact && isOpen) {
+      setIsEditing(true);
+    }
+  }, [startInEditMode, contact, isOpen]);
 
   const addNoteMutation = useMutation({
     mutationFn: (content: string) =>
@@ -193,6 +201,13 @@ export default function ContactModal({ contactId, isOpen, onClose }: ContactModa
       });
     }
   };
+
+  // Reset edit state when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setIsEditing(false);
+    }
+  }, [isOpen]);
 
   const getInitials = (name: string) => {
     return name

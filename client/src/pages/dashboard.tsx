@@ -32,6 +32,7 @@ import type { Contact } from "@shared/schema";
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState<'grid' | 'pipeline'>('grid');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [shouldEditContact, setShouldEditContact] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportHelp, setShowImportHelp] = useState(false);
@@ -400,6 +401,10 @@ export default function Dashboard() {
               <GridView 
                 contacts={filteredContacts as Contact[]} 
                 onContactSelect={setSelectedContactId}
+                onContactEdit={(id) => {
+                  setSelectedContactId(id);
+                  setShouldEditContact(true);
+                }}
                 tableSettings={tableSettings}
               />
             ) : (
@@ -425,7 +430,11 @@ export default function Dashboard() {
         <ContactModal
           contactId={selectedContactId}
           isOpen={!!selectedContactId}
-          onClose={() => setSelectedContactId(null)}
+          onClose={() => {
+            setSelectedContactId(null);
+            setShouldEditContact(false);
+          }}
+          startInEditMode={shouldEditContact}
         />
       )}
 
