@@ -27,11 +27,10 @@ import { isAfter, addDays } from "date-fns";
 interface GridViewProps {
   contacts: Contact[];
   onContactSelect: (id: number) => void;
-  onContactEdit?: (id: number) => void;
   tableSettings: TableSettings;
 }
 
-export default function GridView({ contacts, onContactSelect, onContactEdit, tableSettings }: GridViewProps) {
+export default function GridView({ contacts, onContactSelect, tableSettings }: GridViewProps) {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -275,7 +274,7 @@ export default function GridView({ contacts, onContactSelect, onContactEdit, tab
                       <RowActionsMenu
                         contact={contact}
                         onViewDetails={() => onContactSelect(contact.id)}
-                        onEdit={() => onContactEdit ? onContactEdit(contact.id) : onContactSelect(contact.id)}
+                        onEdit={() => onContactSelect(contact.id)}
                       />
                     </TableCell>
                   </TableRow>

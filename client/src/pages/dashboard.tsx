@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/sidebar";
 import GridView from "@/components/grid-view";
 import PipelineView from "@/components/pipeline-view";
-import ContactModal from "@/components/contact-modal";
+import ContactDetailsSidebar from "@/components/contact-details-sidebar";
 import AddContactModal from "@/components/add-contact-modal";
 import ImportHelpModal from "@/components/import-help-modal";
 import TableSettingsModal, { type TableSettings } from "@/components/table-settings-modal";
@@ -32,7 +32,6 @@ import type { Contact } from "@shared/schema";
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState<'grid' | 'pipeline'>('grid');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
-  const [shouldEditContact, setShouldEditContact] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportHelp, setShowImportHelp] = useState(false);
@@ -401,10 +400,6 @@ export default function Dashboard() {
               <GridView 
                 contacts={filteredContacts as Contact[]} 
                 onContactSelect={setSelectedContactId}
-                onContactEdit={(id) => {
-                  setSelectedContactId(id);
-                  setShouldEditContact(true);
-                }}
                 tableSettings={tableSettings}
               />
             ) : (
@@ -425,18 +420,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Modals */}
-      {selectedContactId && (
-        <ContactModal
-          contactId={selectedContactId}
-          isOpen={!!selectedContactId}
-          onClose={() => {
-            setSelectedContactId(null);
-            setShouldEditContact(false);
-          }}
-          startInEditMode={shouldEditContact}
-        />
-      )}
+      {/* Contact Details Sidebar */}
+      <ContactDetailsSidebar
+        contactId={selectedContactId}
+        isOpen={!!selectedContactId}
+        onClose={() => setSelectedContactId(null)}
+      />
 
       {showAddContact && (
         <AddContactModal
