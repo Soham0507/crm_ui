@@ -52,8 +52,8 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: contact, isLoading } = useQuery<ContactWithDetails>({
-    queryKey: ['/api/contacts', contactId],
+  const { data: contact, isLoading, error } = useQuery<ContactWithDetails>({
+    queryKey: [`/api/contacts/${contactId}`],
     enabled: isOpen && !!contactId,
   });
 
@@ -76,7 +76,7 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
       apiRequest('PATCH', `/api/contacts/${contactId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
       setIsEditing(false);
       toast({
@@ -97,7 +97,7 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
     mutationFn: (content: string) =>
       apiRequest('POST', `/api/contacts/${contactId}/notes`, { content }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       setNewNote("");
       toast({
         title: "Note added",
@@ -117,7 +117,7 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
     mutationFn: (title: string) =>
       apiRequest('POST', `/api/contacts/${contactId}/tasks`, { title }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       setNewTask("");
       toast({
         title: "Task added",
@@ -137,7 +137,7 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
     mutationFn: ({ taskId, completed }: { taskId: number; completed: boolean }) =>
       apiRequest('PATCH', `/api/tasks/${taskId}`, { completed }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
     },
   });
 
@@ -215,6 +215,24 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
               <div className="h-12 w-12 bg-gray-200 rounded-full mb-3"></div>
               <div className="h-6 bg-gray-200 rounded w-32 mb-2"></div>
               <div className="h-4 bg-gray-200 rounded w-24"></div>
+            </div>
+          ) : error ? (
+            <div className="text-red-500 text-sm p-3 bg-red-50 rounded">
+              {error.message.includes('401') ? (
+                <div>
+                  <p className="font-medium mb-1">Not logged in</p>
+                  <p className="text-xs">Please log in to view contact details.</p>
+                  <Button 
+                    size="sm" 
+                    className="mt-2 bg-requisor-turquoise hover:bg-requisor-turquoise/90"
+                    onClick={() => window.location.href = '/api/login'}
+                  >
+                    Log In
+                  </Button>
+                </div>
+              ) : (
+                `Error loading contact: ${error.message}`
+              )}
             </div>
           ) : contact && (
             <div className="flex items-center space-x-4">

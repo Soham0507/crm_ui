@@ -88,6 +88,16 @@ The Replit configuration includes:
 - Autoscale deployment target for production
 - Port 5000 for local development with external port 80
 
+## Known Issues & Solutions
+
+### Contact Editing Issue
+**Problem**: When clicking on a contact to edit, the sidebar shows an infinite loading spinner.
+**Root Cause**: Authentication issue - user needs to be logged in to access individual contact details.
+**Solution**: 
+1. First, navigate to `/api/login` to authenticate with Replit Auth
+2. After successful login, you'll be redirected to the dashboard
+3. Contact editing will then work properly
+
 ## Recent Changes
 
 ### June 18, 2025 - Major Platform Enhancement
