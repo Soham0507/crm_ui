@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [showTableSettings, setShowTableSettings] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showColumnBuilder, setShowColumnBuilder] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<Record<string, any>>({});
   const [filters, setFilters] = useState<FilterCriteria>({
     search: '',
     statuses: [],
@@ -77,7 +78,56 @@ export default function Dashboard() {
     queryKey: ['/api/pipeline/stats'],
   });
 
+  const handleColumnFilterChange = (column: string, value: any) => {
+    setColumnFilters(prev => {
+      if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
+        const { [column]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [column]: value };
+    });
+  };
+
   const filteredContacts = contacts.filter((contact) => {
+    // Column-specific filters
+    for (const [column, filterValues] of Object.entries(columnFilters)) {
+      if (!filterValues || (Array.isArray(filterValues) && filterValues.length === 0)) continue;
+      
+      const contactValue = contact[column as keyof Contact];
+      
+      // Handle different column types
+      if (column === 'tags') {
+        const contactTags = contactValue as string[] || [];
+        const hasMatchingTag = filterValues.some((filterTag: string) => 
+          contactTags.includes(filterTag)
+        );
+        if (!hasMatchingTag) return false;
+      } else if (column === 'dealValue') {
+        const numValue = Number(contactValue) || 0;
+        const hasMatchingRange = filterValues.some((range: string) => {
+          if (range === '$0') return numValue === 0;
+          if (range === '< $1k') return numValue > 0 && numValue < 1000;
+          if (range === '$1k - $5k') return numValue >= 1000 && numValue < 5000;
+          if (range === '$5k - $10k') return numValue >= 5000 && numValue < 10000;
+          if (range === '$10k - $50k') return numValue >= 10000 && numValue < 50000;
+          if (range === '$50k+') return numValue >= 50000;
+          return false;
+        });
+        if (!hasMatchingRange) return false;
+      } else if (column === 'phone' || column === 'email') {
+        const hasValue = !!contactValue;
+        const matchesFilter = filterValues.some((filterValue: string) => {
+          if (filterValue === `Has ${column === 'phone' ? 'Phone' : 'Email'}`) return hasValue;
+          if (filterValue === `No ${column === 'phone' ? 'Phone' : 'Email'}`) return !hasValue;
+          return false;
+        });
+        if (!matchesFilter) return false;
+      } else {
+        // For other columns, check if the value matches any of the filter values
+        if (!filterValues.includes(String(contactValue))) return false;
+      }
+    }
+
     // Basic search
     if (filters.search) {
       const query = filters.search.toLowerCase();
@@ -91,12 +141,12 @@ export default function Dashboard() {
       if (!matchesSearch) return false;
     }
 
-    // Status filter
+    // Status filter (from advanced filters)
     if (filters.statuses.length > 0 && !filters.statuses.includes(contact.status)) {
       return false;
     }
 
-    // Deal value range
+    // Deal value range (from advanced filters)
     const dealValue = contact.dealValue || 0;
     if (filters.dealValueMin !== null && dealValue < filters.dealValueMin) {
       return false;
@@ -115,7 +165,7 @@ export default function Dashboard() {
       if (contactDate > filters.dateRange.to) return false;
     }
 
-    // Tags filter
+    // Tags filter (from advanced filters)
     if (filters.tags.length > 0) {
       const hasMatchingTag = filters.tags.some(tag => 
         contact.tags?.includes(tag)
@@ -130,7 +180,6 @@ export default function Dashboard() {
 
     // Additional criteria
     if (filters.hasPhone === true && !contact.phone) return false;
-    // Note: hasNotes would require checking if contact has notes in a real implementation
 
     return true;
   });
@@ -324,24 +373,41 @@ export default function Dashboard() {
                 </div>
 
                 {/* Filters & Settings */}
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowAdvancedFilters(true)}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                  {(filters.statuses.length > 0 || filters.tags.length > 0 || filters.companies.length > 0 || 
-                    filters.dealValueMin || filters.dealValueMax || filters.dateRange.from || filters.dateRange.to ||
-                    filters.hasPhone || filters.hasNotes) && (
-                    <Badge variant="secondary" className="ml-2 h-4 w-4 p-0 text-xs">
-                      {[filters.statuses.length, filters.tags.length, filters.companies.length, 
-                        filters.dealValueMin ? 1 : 0, filters.dealValueMax ? 1 : 0,
-                        filters.dateRange.from ? 1 : 0, filters.dateRange.to ? 1 : 0,
-                        filters.hasPhone ? 1 : 0, filters.hasNotes ? 1 : 0].reduce((a, b) => a + b, 0)}
-                    </Badge>
+                <div className="flex items-center gap-2">
+                  {Object.keys(columnFilters).length > 0 && (
+                    <>
+                      <Badge variant="secondary" className="bg-requisor-turquoise/10 text-requisor-turquoise">
+                        {Object.keys(columnFilters).length} column filter{Object.keys(columnFilters).length > 1 ? 's' : ''}
+                      </Badge>
+                      <Button
+                        onClick={() => setColumnFilters({})}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                      >
+                        Clear
+                      </Button>
+                    </>
                   )}
-                </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAdvancedFilters(true)}
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filters
+                    {(filters.statuses.length > 0 || filters.tags.length > 0 || filters.companies.length > 0 || 
+                      filters.dealValueMin || filters.dealValueMax || filters.dateRange.from || filters.dateRange.to ||
+                      filters.hasPhone || filters.hasNotes) && (
+                      <Badge variant="secondary" className="ml-2 h-4 w-4 p-0 text-xs">
+                        {[filters.statuses.length, filters.tags.length, filters.companies.length, 
+                          filters.dealValueMin ? 1 : 0, filters.dealValueMax ? 1 : 0,
+                          filters.dateRange.from ? 1 : 0, filters.dateRange.to ? 1 : 0,
+                          filters.hasPhone ? 1 : 0, filters.hasNotes ? 1 : 0].reduce((a, b) => a + b, 0)}
+                      </Badge>
+                    )}
+                  </Button>
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -401,6 +467,8 @@ export default function Dashboard() {
                 contacts={filteredContacts as Contact[]} 
                 onContactSelect={setSelectedContactId}
                 tableSettings={tableSettings}
+                columnFilters={columnFilters}
+                onColumnFilterChange={handleColumnFilterChange}
               />
             ) : (
               <PipelineView 

@@ -38,6 +38,7 @@ export default function EditableCell({
     value && type === 'date' ? new Date(value) : undefined
   );
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasChanges = useRef(false);
 
   useEffect(() => {
     if (isEditing && inputRef.current && ['text', 'email', 'phone', 'currency'].includes(type)) {
@@ -46,7 +47,11 @@ export default function EditableCell({
     }
   }, [isEditing, type]);
 
-  const handleSave = () => {
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
+  const handleSave = (forceExit = true) => {
     let finalValue = editValue;
     
     if (type === 'currency') {
@@ -57,15 +62,32 @@ export default function EditableCell({
       finalValue = editValue.split(',').map(tag => tag.trim()).filter(Boolean);
     }
     
-    onSave(finalValue);
-    setIsEditing(false);
+    // Only save if value actually changed
+    if (JSON.stringify(finalValue) !== JSON.stringify(value)) {
+      onSave(finalValue);
+      hasChanges.current = false;
+    }
+    
+    if (forceExit) {
+      setIsEditing(false);
+    }
   };
 
   const handleCancel = () => {
     setEditValue(value);
     setSelectedDate(value && type === 'date' ? new Date(value) : undefined);
     setIsEditing(false);
+    hasChanges.current = false;
     onCancel();
+  };
+
+  const handleBlur = () => {
+    // Auto-save on blur for better UX
+    if (hasChanges.current) {
+      handleSave(true);
+    } else {
+      setIsEditing(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -75,6 +97,11 @@ export default function EditableCell({
     } else if (e.key === 'Escape') {
       handleCancel();
     }
+  };
+
+  const handleInputChange = (newValue: any) => {
+    setEditValue(newValue);
+    hasChanges.current = true;
   };
 
   const renderDisplayValue = () => {
@@ -148,7 +175,16 @@ export default function EditableCell({
     switch (type) {
       case 'select':
         return (
-          <Select value={editValue} onValueChange={setEditValue}>
+          <Select 
+            value={editValue} 
+            onValueChange={(newValue) => {
+              handleInputChange(newValue);
+              // Auto-save on select change
+              setEditValue(newValue);
+              onSave(newValue);
+              setIsEditing(false);
+            }}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -196,7 +232,8 @@ export default function EditableCell({
               ref={inputRef}
               type="number"
               value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onBlur={handleBlur}
               onKeyPress={handleKeyPress}
               className="pl-9"
               placeholder="0.00"
@@ -211,7 +248,8 @@ export default function EditableCell({
           <Input
             ref={inputRef}
             value={Array.isArray(editValue) ? editValue.join(', ') : editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onBlur={handleBlur}
             onKeyPress={handleKeyPress}
             placeholder="Enter tags separated by commas"
           />
@@ -221,7 +259,12 @@ export default function EditableCell({
         return (
           <Checkbox
             checked={Boolean(editValue)}
-            onCheckedChange={setEditValue}
+            onCheckedChange={(checked) => {
+              handleInputChange(checked);
+              // Auto-save checkbox immediately
+              onSave(checked);
+              setIsEditing(false);
+            }}
           />
         );
 
@@ -230,7 +273,8 @@ export default function EditableCell({
           <Input
             ref={inputRef}
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onBlur={handleBlur}
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
             type={type === 'email' ? 'email' : type === 'phone' ? 'tel' : 'text'}
@@ -241,28 +285,8 @@ export default function EditableCell({
 
   if (isEditing) {
     return (
-      <div className="flex items-center space-x-2 min-w-0">
-        <div className="flex-1 min-w-0">
-          {renderEditField()}
-        </div>
-        <div className="flex items-center space-x-1 flex-shrink-0">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
-            onClick={handleSave}
-          >
-            <Check className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-            onClick={handleCancel}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+      <div className="min-w-0">
+        {renderEditField()}
       </div>
     );
   }

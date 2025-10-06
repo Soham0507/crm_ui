@@ -20,6 +20,7 @@ import EditableCell from "@/components/editable-cell";
 import RowActionsMenu from "@/components/row-actions-menu";
 import BulkActionsBar from "@/components/bulk-actions-bar";
 import ColumnAnalytics from "@/components/column-analytics";
+import ColumnFilter from "@/components/column-filter";
 import type { Contact } from "@shared/schema";
 import type { TableSettings } from "@/components/table-settings-modal";
 import { isAfter, addDays } from "date-fns";
@@ -28,9 +29,17 @@ interface GridViewProps {
   contacts: Contact[];
   onContactSelect: (id: number) => void;
   tableSettings: TableSettings;
+  columnFilters?: any;
+  onColumnFilterChange?: (column: string, value: any) => void;
 }
 
-export default function GridView({ contacts, onContactSelect, tableSettings }: GridViewProps) {
+export default function GridView({ 
+  contacts, 
+  onContactSelect, 
+  tableSettings,
+  columnFilters = {},
+  onColumnFilterChange = () => {}
+}: GridViewProps) {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -194,7 +203,13 @@ export default function GridView({ contacts, onContactSelect, tableSettings }: G
                       column.key === 'actions' ? 'w-20' : ''
                     }
                   >
-                    {column.label}
+                    <ColumnFilter
+                      column={column.key}
+                      label={column.label}
+                      contacts={contacts}
+                      activeFilters={columnFilters}
+                      onFilterChange={onColumnFilterChange}
+                    />
                   </TableHead>
                 ))}
                 <TableHead className="w-20">Actions</TableHead>
