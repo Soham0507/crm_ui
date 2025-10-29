@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import CustomTables from "@/pages/custom-tables";
 import Landing from "@/pages/landing";
+import Outreach from "@/pages/outreach";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +32,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/custom-tables" component={CustomTables} />
+          <Route path="/outreach" component={Outreach} />
         </>
       )}
       <Route>

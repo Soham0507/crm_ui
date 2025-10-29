@@ -611,6 +611,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales Outreach Agent Routes
+  
+  // ICP Profiles
+  app.get("/api/icp-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profiles = await storage.getICPProfiles(userId);
+      res.json(profiles);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ICP profiles" });
+    }
+  });
+
+  app.get("/api/icp-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const profile = await storage.getICPProfile(id, userId);
+      if (!profile) {
+        return res.status(404).json({ message: "ICP profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ICP profile" });
+    }
+  });
+
+  app.post("/api/icp-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, config, narrative } = req.body;
+      const profile = await storage.createICPProfile({
+        userId,
+        name,
+        config,
+        narrative
+      });
+      res.status(201).json(profile);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create ICP profile" });
+    }
+  });
+
+  app.post("/api/icp-profiles/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { prompt } = req.body;
+      // Mock AI generation for now - would integrate with OpenAI
+      const mockConfig = {
+        company: {
+          industries: ["FinTech", "SaaS"],
+          geo: ["United States", "Canada"],
+          size: ["51-200", "201-500"],
+          tech: ["Stripe", "AWS"]
+        },
+        personas: [{
+          title: ["Head of Operations", "COO", "VP Operations"],
+          seniority: ["VP", "C-Level"],
+          functions: ["Operations", "Finance"]
+        }],
+        pain_points: ["Manual reconciliation", "High processing costs", "Scaling challenges"],
+        triggers: ["Series B funding", "Hiring operations team", "International expansion"],
+        value_props: ["Reduce reconciliation time by 80%", "Save $100k+ annually", "Scale operations efficiently"],
+        keywords: ["payment operations", "financial reconciliation", "automation"]
+      };
+      
+      const narrative = `We target mid-stage fintech companies that are experiencing rapid growth and need to automate their payment operations. These companies typically have raised Series A or B funding, operate in multiple markets, and are looking to reduce manual processes while scaling their operations team.`;
+      
+      res.json({ config: mockConfig, narrative });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate ICP with AI" });
+    }
+  });
+
+  // Lead Lists
+  app.get("/api/lead-lists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const lists = await storage.getLeadLists(userId);
+      res.json(lists);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch lead lists" });
+    }
+  });
+
+  app.get("/api/lead-lists/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const list = await storage.getLeadList(id, userId);
+      if (!list) {
+        return res.status(404).json({ message: "Lead list not found" });
+      }
+      res.json(list);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch lead list" });
+    }
+  });
+
+  app.get("/api/lead-lists/:id/leads", isAuthenticated, async (req: any, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const leads = await storage.getLeadsByList(listId);
+      res.json(leads);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  app.post("/api/lead-lists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, icpId, leadIds } = req.body;
+      const list = await storage.createLeadList({
+        userId,
+        name,
+        icpId
+      });
+      
+      // Add leads to list if provided
+      if (leadIds && leadIds.length > 0) {
+        // Would add leads to the list here
+      }
+      
+      res.status(201).json({ ...list, leadCount: leadIds?.length || 0 });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create lead list" });
+    }
+  });
+
+  // Lead Search & Enrichment
+  app.post("/api/leads/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { icpId, provider } = req.body;
+      
+      // Mock lead search - would integrate with Apollo/Clearbit/etc
+      const mockLeads = [
+        {
+          fullName: "Sarah Johnson",
+          title: "Head of Operations",
+          linkedin: "https://linkedin.com/in/sarahjohnson",
+          email: { value: "sarah@fintech-startup.com", confidence: 0.95, status: "valid" },
+          company: { name: "FinTech Startup Inc", domain: "fintech-startup.com", size: "51-200", industry: "Financial Services" },
+          geo: "San Francisco, CA",
+          score: 92,
+          source: "apollo",
+          tags: ["fintech", "operations", "series-b"]
+        },
+        {
+          fullName: "Michael Chen",
+          title: "COO",
+          linkedin: "https://linkedin.com/in/michaelchen",
+          email: { value: "mchen@paytech.io", confidence: 0.89, status: "valid" },
+          company: { name: "PayTech Solutions", domain: "paytech.io", size: "201-500", industry: "Payments" },
+          geo: "New York, NY",
+          score: 88,
+          source: "apollo",
+          tags: ["payments", "scale-up", "operations"]
+        }
+      ];
+
+      // Create a lead list
+      const list = await storage.createLeadList({
+        userId,
+        name: `Search Results - ${new Date().toLocaleDateString()}`,
+        icpId
+      });
+
+      // Add leads to database
+      for (const leadData of mockLeads) {
+        await storage.createLead({
+          listId: list.id,
+          data: leadData,
+          email: leadData.email.value,
+          status: 'new',
+          score: leadData.score,
+          consent: false
+        });
+      }
+
+      res.json({ listId: list.id, count: mockLeads.length });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search for leads" });
+    }
+  });
+
+  app.post("/api/leads/enrich", isAuthenticated, async (req: any, res) => {
+    try {
+      const { leadIds, fields } = req.body;
+      // Mock enrichment - would integrate with enrichment APIs
+      res.json({ enriched: leadIds.length });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to enrich leads" });
+    }
+  });
+
+  app.post("/api/leads/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const { leadIds } = req.body;
+      // Mock verification - would integrate with email verification APIs
+      res.json({ verified: leadIds.length });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to verify emails" });
+    }
+  });
+
+  // Campaigns
+  app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campaigns = await storage.getCampaigns(userId);
+      res.json(campaigns);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.post("/api/campaigns", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, icpId, listId, settings, steps } = req.body;
+      
+      const campaign = await storage.createCampaign({
+        userId,
+        name,
+        icpId,
+        listId,
+        settings,
+        status: 'draft'
+      });
+
+      // Add campaign steps
+      if (steps && steps.length > 0) {
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+          await storage.createCampaignStep({
+            campaignId: campaign.id,
+            stepOrder: i + 1,
+            dayOffset: step.dayOffset,
+            channel: step.channel,
+            templateId: step.templateId,
+            content: {
+              subject: step.subject,
+              body: step.body
+            },
+            conditions: step.conditions
+          });
+        }
+      }
+
+      res.status(201).json(campaign);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create campaign" });
+    }
+  });
+
+  app.post("/api/campaigns/:id/launch", isAuthenticated, async (req: any, res) => {
+    try {
+      const campaignId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      // Update campaign status to active
+      await storage.updateCampaignStatus(campaignId, userId, 'active');
+      
+      res.json({ message: "Campaign launched successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to launch campaign" });
+    }
+  });
+
+  app.patch("/api/campaigns/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const campaignId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const { status } = req.body;
+      
+      await storage.updateCampaignStatus(campaignId, userId, status);
+      
+      res.json({ message: "Campaign updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update campaign" });
+    }
+  });
+
+  app.post("/api/campaigns/generate-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { stepId, context } = req.body;
+      
+      // Mock AI email generation - would integrate with OpenAI
+      const mockEmail = {
+        subject: "Streamline Your Payment Operations",
+        body: `Hi {{firstName}},
+
+I noticed {{company}} is scaling rapidly in the fintech space. Many companies at your stage struggle with manual payment reconciliation eating up valuable engineering time.
+
+We help companies like yours automate reconciliation, reducing processing time by 80% and saving $100k+ annually in operational costs.
+
+Would you be open to a brief 15-minute call next week to explore if we could help {{company}} scale operations more efficiently?
+
+Best regards,
+{{senderName}}`
+      };
+      
+      res.json(mockEmail);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate email" });
+    }
+  });
+
+  // Email Templates
+  app.get("/api/email-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const templates = await storage.getEmailTemplates(userId);
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -6,6 +6,12 @@ import {
   users,
   customTables,
   customTableRecords,
+  icpProfiles,
+  leadLists,
+  leads,
+  campaigns,
+  campaignSteps,
+  emailTemplates,
   type Contact, 
   type InsertContact,
   type Note,
@@ -21,7 +27,18 @@ import {
   type InsertCustomTable,
   type CustomTableRecord,
   type InsertCustomTableRecord,
-  type CustomTableWithRecords
+  type CustomTableWithRecords,
+  type ICPProfile,
+  type InsertICPProfile,
+  type LeadList,
+  type InsertLeadList,
+  type Lead,
+  type InsertLead,
+  type Campaign,
+  type InsertCampaign,
+  type CampaignStep,
+  type EmailTemplate,
+  type InsertEmailTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -68,6 +85,33 @@ export interface IStorage {
   createCustomTableRecord(record: InsertCustomTableRecord): Promise<CustomTableRecord>;
   updateCustomTableRecord(id: number, record: Partial<InsertCustomTableRecord>, userId: string): Promise<CustomTableRecord | undefined>;
   deleteCustomTableRecord(id: number, userId: string): Promise<boolean>;
+  
+  // Sales Outreach - ICP Profiles
+  getICPProfiles(userId: string): Promise<ICPProfile[]>;
+  getICPProfile(id: number, userId: string): Promise<ICPProfile | undefined>;
+  createICPProfile(profile: InsertICPProfile): Promise<ICPProfile>;
+  
+  // Sales Outreach - Lead Lists
+  getLeadLists(userId: string): Promise<LeadList[]>;
+  getLeadList(id: number, userId: string): Promise<LeadList | undefined>;
+  createLeadList(list: InsertLeadList): Promise<LeadList>;
+  
+  // Sales Outreach - Leads
+  getLeadsByList(listId: number): Promise<Lead[]>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  
+  // Sales Outreach - Campaigns
+  getCampaigns(userId: string): Promise<Campaign[]>;
+  getCampaign(id: number, userId: string): Promise<Campaign | undefined>;
+  createCampaign(campaign: InsertCampaign): Promise<Campaign>;
+  updateCampaignStatus(id: number, userId: string, status: string): Promise<void>;
+  
+  // Sales Outreach - Campaign Steps
+  createCampaignStep(step: any): Promise<CampaignStep>;
+  
+  // Sales Outreach - Email Templates  
+  getEmailTemplates(userId: string): Promise<EmailTemplate[]>;
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -355,6 +399,131 @@ export class DatabaseStorage implements IStorage {
       .delete(customTableRecords)
       .where(and(eq(customTableRecords.id, id), eq(customTableRecords.userId, userId)));
     return result.rowCount > 0;
+  }
+  
+  // Sales Outreach - ICP Profiles
+  async getICPProfiles(userId: string): Promise<ICPProfile[]> {
+    return await db
+      .select()
+      .from(icpProfiles)
+      .where(eq(icpProfiles.userId, userId))
+      .orderBy(icpProfiles.createdAt);
+  }
+  
+  async getICPProfile(id: number, userId: string): Promise<ICPProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(icpProfiles)
+      .where(and(eq(icpProfiles.id, id), eq(icpProfiles.userId, userId)));
+    return profile;
+  }
+  
+  async createICPProfile(profile: InsertICPProfile): Promise<ICPProfile> {
+    const [newProfile] = await db
+      .insert(icpProfiles)
+      .values(profile)
+      .returning();
+    return newProfile;
+  }
+  
+  // Sales Outreach - Lead Lists
+  async getLeadLists(userId: string): Promise<LeadList[]> {
+    return await db
+      .select()
+      .from(leadLists)
+      .where(eq(leadLists.userId, userId))
+      .orderBy(leadLists.createdAt);
+  }
+  
+  async getLeadList(id: number, userId: string): Promise<LeadList | undefined> {
+    const [list] = await db
+      .select()
+      .from(leadLists)
+      .where(and(eq(leadLists.id, id), eq(leadLists.userId, userId)));
+    return list;
+  }
+  
+  async createLeadList(list: InsertLeadList): Promise<LeadList> {
+    const [newList] = await db
+      .insert(leadLists)
+      .values(list)
+      .returning();
+    return newList;
+  }
+  
+  // Sales Outreach - Leads
+  async getLeadsByList(listId: number): Promise<Lead[]> {
+    return await db
+      .select()
+      .from(leads)
+      .where(eq(leads.listId, listId))
+      .orderBy(leads.createdAt);
+  }
+  
+  async createLead(lead: InsertLead): Promise<Lead> {
+    const [newLead] = await db
+      .insert(leads)
+      .values(lead)
+      .returning();
+    return newLead;
+  }
+  
+  // Sales Outreach - Campaigns
+  async getCampaigns(userId: string): Promise<Campaign[]> {
+    return await db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.userId, userId))
+      .orderBy(campaigns.createdAt);
+  }
+  
+  async getCampaign(id: number, userId: string): Promise<Campaign | undefined> {
+    const [campaign] = await db
+      .select()
+      .from(campaigns)
+      .where(and(eq(campaigns.id, id), eq(campaigns.userId, userId)));
+    return campaign;
+  }
+  
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    const [newCampaign] = await db
+      .insert(campaigns)
+      .values(campaign)
+      .returning();
+    return newCampaign;
+  }
+  
+  async updateCampaignStatus(id: number, userId: string, status: string): Promise<void> {
+    await db
+      .update(campaigns)
+      .set({ status, updatedAt: new Date() })
+      .where(and(eq(campaigns.id, id), eq(campaigns.userId, userId)));
+  }
+  
+  // Sales Outreach - Campaign Steps
+  async createCampaignStep(step: any): Promise<CampaignStep> {
+    const [newStep] = await db
+      .insert(campaignSteps)
+      .values(step)
+      .returning();
+    return newStep;
+  }
+  
+  // Sales Outreach - Email Templates
+  async getEmailTemplates(userId: string): Promise<EmailTemplate[]> {
+    return await db
+      .select()
+      .from(emailTemplates)
+      .where(eq(emailTemplates.userId, userId))
+      .orderBy(emailTemplates.createdAt);
+  }
+  
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [newTemplate] = await db
+      .insert(emailTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
   }
 }
 

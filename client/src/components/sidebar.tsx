@@ -10,7 +10,8 @@ import {
   BarChart3,
   User,
   LogOut,
-  Database
+  Database,
+  Sparkles
 } from "lucide-react";
 import requisorLogo from "@assets/Requisor Logo_1753816063994.png";
 
@@ -105,6 +106,15 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             >
               <Database className="mr-3 h-5 w-5" />
               Custom Tables
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
+              onClick={() => window.location.href = '/outreach'}
+            >
+              <Sparkles className="mr-3 h-5 w-5" />
+              Sales Outreach
             </Button>
             <Button
               variant="ghost"
