@@ -1,0 +1,228 @@
+Awesome—here’s a crisp, **Replit-optimized build spec** to take your **CRM Agent** to the next level: define ICP → find leads → enrich/verify → build outreach campaigns → launch via native sends or Zapier-connected tools. It’s written so Replit can scaffold a working app end-to-end.
+
+---
+
+## 🤖 Replit Prompt: Build “Growth CRM Agent” — ICP → Lead Sourcing → Campaigns (Email/LinkedIn) with Zapier Option
+
+**Objective**
+Create an AI-powered CRM agent that:
+
+1. **Captures/infers ICP** (Ideal Customer Profile).
+2. **Finds leads** (company + people) and **enriches contacts** (email, LinkedIn, role).
+3. **Builds & sends cold outreach campaigns** (email + LinkedIn DM; optional groups/communities).
+4. Uses **Zapier integrations** (or native APIs) for delivery, tracking, and CRM sync.
+
+> ⚠️ **Compliance & TOS**: Do not scrape sites that prohibit it (e.g., LinkedIn’s TOS). Use **user-authorized APIs/partners** (Apollo, Clearbit, People Data Labs, Hunter, Clay, Phantombuster, Google CSE/SerpAPI). Include **opt-out & throttling**; comply with **CAN-SPAM/GDPR**.
+
+---
+
+### 1) ICP Builder (AI + Form)
+
+**Flow**
+
+* Left sidebar **ICP Wizard** (AI chat + structured form).
+* Collect or infer:
+
+  * Industries, geos, company size, tech stack, seniority/roles, pains, triggers, buying window, budget band.
+* Output a **typed JSON ICP** and a short **narrative** (value props, objections, proof).
+
+**Deliverables**
+
+* `icp.json` schema (see below).
+* “Save ICP” → persists to CRM.
+* “Generate Target Query” → string/filters usable by data providers & Google CSE (e.g., `site:crunchbase.com fintech AND "Head of Operations" "San Francisco"`).
+
+**ICP Schema**
+
+```json
+{
+  "name": "Fintech-Seed-US",
+  "company": { "industries": ["FinTech"], "geo": ["US"], "size": ["11-50","51-200"], "tech": ["Stripe","Snowflake"] },
+  "personas": [{ "title": ["Head of Ops","COO"], "seniority": ["Director","VP"], "functions": ["Operations"] }],
+  "pain_points": ["manual reconciliations","expensive chargebacks"],
+  "triggers": ["hiring ops mgr","Series A announcement"],
+  "value_props": ["reduce ops cost 30%","speed to revenue"],
+  "keywords": ["payment ops", "chargebacks", "reconciliation"]
+}
+```
+
+---
+
+### 2) Lead Sourcing & Enrichment (compliant)
+
+**Integrations (choose any)**
+
+* **Company/People Data**: Apollo, Clearbit, People Data Labs, Crunchbase API.
+* **Email Discovery/Verification**: Hunter, Snov, NeverBounce, Zerobounce.
+* **Search**: Google Custom Search / SerpAPI (for public pages, blogs, press).
+* **LinkedIn**: *Do not scrape.* Support **CSV import** from Sales Navigator exports or **user’s Phantombuster/Clay workspace** (via API key).
+
+**Flow**
+
+* “Find Leads” → uses ICP filters to query providers.
+* **Enrich** each record (role, LinkedIn URL, company domain, email guess, verification result, phone if available).
+* **Validate** emails (NeverBounce etc.).
+* **Dedupe** by email/domain + persona.
+* Present **Lead Table** with score.
+
+**Lead Object**
+
+```json
+{
+  "fullName": "Dana Rivera",
+  "title": "Head of Operations",
+  "linkedin": "https://linkedin.com/in/danar...",
+  "email": { "value": "dana@company.com", "confidence": 0.91, "status": "valid" },
+  "company": { "name": "AcmePay", "domain": "acmepay.com", "size": "51-200", "industry": "FinTech" },
+  "geo": "San Francisco, US",
+  "score": 87,
+  "source": "apollo",
+  "tags": ["fintech","ops"]
+}
+```
+
+**UI**
+
+* Filters: persona, industry, geo, verification status, score.
+* Bulk actions: add to list, export CSV, push to campaign.
+
+---
+
+### 3) Campaign Builder (Email + LinkedIn)
+
+**Channels**
+
+* **Email** (native SMTP or via Gmail/Outlook through **Zapier**; or Mailgun/Resend).
+* **LinkedIn**: export tasks/CSV for manual send OR send via **user-owned** Phantombuster/Dripify/Clay actions through Zapier/Make.
+
+**Campaign Features**
+
+* **Sequences**: Day 0, 3, 7 with branch on reply/bounce.
+* **Personalization**: variables & AI snippets (`{{firstName}}`, `{{recent_post}}`) + research step (scrape **company blog only** or use provider summaries).
+* **Safety**: daily send limits, warm-up pacing, random delays, time-of-day windows, auto-unsubscribe footer for email.
+
+**Tracking**
+
+* Status per recipient: queued/sent/open/click/replied/bounced.
+* Link tracking domain (optional).
+* **Opt-out** management across the CRM.
+
+**Campaign Schema**
+
+```json
+{
+  "name": "Fintech-COO-Outreach-SetA",
+  "from": {"name":"Naveen","email":"naveen@requisor.io"},
+  "steps":[
+    {"dayOffset":0,"channel":"email","templateId":"t1"},
+    {"dayOffset":3,"channel":"email","templateId":"t2","ifNoReply":true},
+    {"dayOffset":6,"channel":"linkedin","action":"connection_request","note":"short"}
+  ],
+  "audienceListId":"list_abc",
+  "limits":{"maxPerDay":60,"window":"09:00-17:00","timezone":"America/Chicago"}
+}
+```
+
+**Templates**
+
+* Library with AI assistant: generate 3 variants (A/B), tone (direct/helpful/humorous), 100–130 words max, one CTA.
+* Snippets: case-study proof, value prop, soft CTA, PS lines.
+
+---
+
+### 4) Zapier / Native Delivery
+
+**Option A — Zapier (fastest ship)**
+
+* Zaps:
+
+  * “Campaign Send → Gmail/Outlook”
+  * “LinkedIn task → Phantombuster/Clay scenario”
+  * “Reply webhook → mark ‘replied’ & stop sequence”
+* Provide **webhook endpoints** in CRM for status updates.
+
+**Option B — Native (longer term)**
+
+* Email via Resend/Mailgun + inbound replies webhook + tracking pixels/links.
+
+---
+
+### 5) Data Model & APIs
+
+**Tables**
+
+* `icp_profiles(id, name, json, createdBy)`
+* `lead_lists(id, name, icpId, createdAt)`
+* `leads(id, listId, json, status, consent, createdAt)`
+* `campaigns(id, name, settingsJson, status)`
+* `campaign_steps(id, campaignId, stepJson)`
+* `deliveries(id, leadId, campaignId, stepId, status, providerMessageId, timestamps)`
+* `unsubscribes(email, source, ts)`
+
+**Server Routes**
+
+* `POST /api/icp/generate` (AI)
+* `POST /api/leads/find` (provider adapters)
+* `POST /api/leads/verify`
+* `POST /api/campaigns` / `POST /api/campaigns/:id/launch`
+* `POST /api/webhooks/zapier` (status updates)
+* `POST /api/unsubscribe` (list-wide opt-out)
+
+---
+
+### 6) AI Prompts (drop-in)
+
+**ICP Synthesizer (system)**
+
+> You are a GTM strategist. Produce a concise ICP JSON (industries, size, geos, personas, pains, triggers, keywords) + a 3-sentence narrative.
+
+**Email Writer (system)**
+
+> You are a B2B copywriter. Write a cold email under 120 words, one CTA, personalize with {{company}} context, avoid spammy words, friendly/credible tone. Return subject + body; mark variables with {{}}.
+
+**Research Snippet**
+
+> Summarize {{company}} in 1 sentence from allowed sources (company site/blog only). If none, return “—”.
+
+---
+
+### 7) UI Layout (React + Tailwind)
+
+* **Left**: ICP / Agent chat, saved ICPs.
+* **Center**: Leads table (filters, score, verification).
+* **Right**: Campaign builder (sequence timeline, templates, preview).
+* Top bar: “Find Leads”, “Verify”, “Add to Campaign”, “Launch”, “Export CSV”.
+
+---
+
+### 8) Compliance & Safety
+
+* No unauthorized scraping; rely on user-authorized APIs or CSV imports.
+* Include **unsubscribe** + suppression lists; respect opt-outs across all campaigns.
+* Throttle sending; respect recipient locale time windows.
+* Store lawful basis flags (consent/legitimate interest if applicable).
+
+---
+
+### ✅ Final Replit Instruction (paste verbatim)
+
+> Replit, build a **Growth CRM Agent** that:
+>
+> 1. Captures an **ICP** via chat and form → saves a typed `icp.json`.
+> 2. **Finds & enriches leads** using provider adapters (Apollo/Clearbit/PDL/Hunter) or CSV import; verifies emails; dedupes; scores leads.
+> 3. Builds **multi-step campaigns** (email + LinkedIn task export), with personalization variables and AI-written templates (A/B).
+> 4. Supports **Zapier** for delivery (Gmail/Outlook, Phantombuster/Clay) and webhooks for status updates; optional native email later.
+> 5. Provides dashboards for delivery metrics, replies, bounces; supports **unsubscribe** and suppression lists.
+> 6. Enforces compliance (CAN-SPAM/GDPR), sending limits, and time-window throttling.
+>    Deliver a working UI (React + Tailwind) and backend routes (Node/Express) with provider adapters, plus environment-based secrets for API keys.
+
+---
+
+If you want, I can also supply:
+
+* Provider adapter stubs (Apollo/Clearbit/Hunter)
+* Email verification adapter (NeverBounce)
+* React table with filters + bulk actions
+* Zapier webhook payload examples
+
+This will give you a powerful, compliant **ICP → Leads → Campaigns** engine inside Requisor.

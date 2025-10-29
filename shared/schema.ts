@@ -144,6 +144,190 @@ export type InsertCustomTable = z.infer<typeof insertCustomTableSchema>;
 export type CustomTableRecord = typeof customTableRecords.$inferSelect;
 export type InsertCustomTableRecord = z.infer<typeof insertCustomTableRecordSchema>;
 
+// Sales Outreach Agent schemas
+export const icpProfiles = pgTable('icp_profiles', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  config: jsonb('config').notNull(),
+  narrative: text('narrative'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const leadLists = pgTable('lead_lists', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  icpId: integer('icp_id').references(() => icpProfiles.id),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+export const leads = pgTable('leads', {
+  id: serial('id').primaryKey(),
+  listId: integer('list_id').references(() => leadLists.id),
+  data: jsonb('data').notNull(),
+  email: text('email'),
+  status: text('status').notNull().default('new'),
+  score: integer('score'),
+  consent: boolean('consent').default(false),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+export const campaigns = pgTable('campaigns', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  icpId: integer('icp_id').references(() => icpProfiles.id),
+  listId: integer('list_id').references(() => leadLists.id),
+  settings: jsonb('settings').notNull(),
+  status: text('status').notNull().default('draft'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const campaignSteps = pgTable('campaign_steps', {
+  id: serial('id').primaryKey(),
+  campaignId: integer('campaign_id').references(() => campaigns.id),
+  stepOrder: integer('step_order').notNull(),
+  dayOffset: integer('day_offset').notNull(),
+  channel: text('channel').notNull(), // email, linkedin
+  templateId: text('template_id'),
+  content: jsonb('content').notNull(),
+  conditions: jsonb('conditions') // if no reply, etc
+});
+
+export const emailTemplates = pgTable('email_templates', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  variables: text('variables').array(),
+  category: text('category'), // cold, followup, etc
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+export const deliveries = pgTable('deliveries', {
+  id: serial('id').primaryKey(),
+  leadId: integer('lead_id').references(() => leads.id),
+  campaignId: integer('campaign_id').references(() => campaigns.id),
+  stepId: integer('step_id').references(() => campaignSteps.id),
+  status: text('status').notNull(), // queued, sent, opened, clicked, replied, bounced
+  providerMessageId: text('provider_message_id'),
+  sentAt: timestamp('sent_at'),
+  openedAt: timestamp('opened_at'),
+  clickedAt: timestamp('clicked_at'),
+  repliedAt: timestamp('replied_at'),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+export const unsubscribes = pgTable('unsubscribes', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  source: text('source'),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// Types for Sales Outreach
+export interface ICPConfig {
+  company: {
+    industries: string[];
+    geo: string[];
+    size: string[];
+    tech: string[];
+  };
+  personas: {
+    title: string[];
+    seniority: string[];
+    functions: string[];
+  }[];
+  pain_points: string[];
+  triggers: string[];
+  value_props: string[];
+  keywords: string[];
+}
+
+export interface LeadData {
+  fullName: string;
+  title: string;
+  linkedin?: string;
+  email: {
+    value: string;
+    confidence: number;
+    status: 'valid' | 'invalid' | 'pending';
+  };
+  company: {
+    name: string;
+    domain: string;
+    size: string;
+    industry: string;
+  };
+  geo: string;
+  score: number;
+  source: string;
+  tags: string[];
+}
+
+export interface CampaignSettings {
+  from: {
+    name: string;
+    email: string;
+  };
+  limits: {
+    maxPerDay: number;
+    window: string;
+    timezone: string;
+  };
+  tracking: boolean;
+  optOutFooter: boolean;
+}
+
+// Insert schemas
+export const insertICPProfileSchema = createInsertSchema(icpProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertLeadListSchema = createInsertSchema(leadLists).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true
+});
+
+// Select types
+export type ICPProfile = typeof icpProfiles.$inferSelect;
+export type LeadList = typeof leadLists.$inferSelect;
+export type Lead = typeof leads.$inferSelect;
+export type Campaign = typeof campaigns.$inferSelect;
+export type CampaignStep = typeof campaignSteps.$inferSelect;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type Delivery = typeof deliveries.$inferSelect;
+export type Unsubscribe = typeof unsubscribes.$inferSelect;
+
+// Insert types
+export type InsertICPProfile = z.infer<typeof insertICPProfileSchema>;
+export type InsertLeadList = z.infer<typeof insertLeadListSchema>;
+export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+
 export type ContactWithDetails = Contact & {
   notes: Note[];
   tasks: Task[];
