@@ -13,6 +13,8 @@ import {
   campaignSteps,
   emailTemplates,
   emails,
+  emailProviderAccounts,
+  emailSequences,
   type Contact, 
   type InsertContact,
   type Note,
@@ -41,10 +43,14 @@ import {
   type EmailTemplate,
   type InsertEmailTemplate,
   type Email,
-  type InsertEmail
+  type InsertEmail,
+  type EmailProviderAccount,
+  type InsertEmailProviderAccount,
+  type EmailSequence,
+  type InsertEmailSequence
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -130,6 +136,19 @@ export interface IStorage {
   getEmailsByContact(contactId: number, userId: string): Promise<Email[]>;
   createEmail(email: InsertEmail): Promise<Email>;
   updateEmailStatus(id: number, userId: string, status: 'draft' | 'sending' | 'sent' | 'failed', error?: string): Promise<void>;
+
+  // Email Provider Accounts
+  createEmailProviderAccount(account: InsertEmailProviderAccount): Promise<EmailProviderAccount>;
+  getEmailProviderAccounts(userId: string): Promise<EmailProviderAccount[]>;
+  getEmailProviderAccountById(id: number, userId: string): Promise<EmailProviderAccount | null>;
+  updateEmailProviderAccount(id: number, userId: string, updates: Partial<EmailProviderAccount>): Promise<EmailProviderAccount | null>;
+  deleteEmailProviderAccount(id: number, userId: string): Promise<void>;
+
+  // Email Sequences
+  createEmailSequence(sequence: InsertEmailSequence): Promise<EmailSequence>;
+  getEmailSequencesByCampaign(campaignId: number): Promise<EmailSequence[]>;
+  updateEmailSequence(id: number, updates: Partial<EmailSequence>): Promise<EmailSequence | null>;
+  deleteEmailSequence(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -739,6 +758,83 @@ export class DatabaseStorage implements IStorage {
       .update(emails)
       .set(updateData)
       .where(and(eq(emails.id, id), eq(emails.userId, userId)));
+  }
+
+  // Email Provider Accounts
+  async createEmailProviderAccount(account: InsertEmailProviderAccount): Promise<EmailProviderAccount> {
+    // Set other accounts as non-default if this is set as default
+    if (account.isDefault) {
+      await db.update(emailProviderAccounts)
+        .set({ isDefault: false })
+        .where(eq(emailProviderAccounts.userId, account.userId));
+    }
+    const [created] = await db.insert(emailProviderAccounts).values(account).returning();
+    return created;
+  }
+
+  async getEmailProviderAccounts(userId: string): Promise<EmailProviderAccount[]> {
+    return db.select().from(emailProviderAccounts)
+      .where(eq(emailProviderAccounts.userId, userId))
+      .orderBy(desc(emailProviderAccounts.isDefault), desc(emailProviderAccounts.createdAt));
+  }
+
+  async getEmailProviderAccountById(id: number, userId: string): Promise<EmailProviderAccount | null> {
+    const [account] = await db.select().from(emailProviderAccounts)
+      .where(and(
+        eq(emailProviderAccounts.id, id),
+        eq(emailProviderAccounts.userId, userId)
+      ));
+    return account || null;
+  }
+
+  async updateEmailProviderAccount(id: number, userId: string, updates: Partial<EmailProviderAccount>): Promise<EmailProviderAccount | null> {
+    // If setting as default, unset others
+    if (updates.isDefault) {
+      await db.update(emailProviderAccounts)
+        .set({ isDefault: false })
+        .where(eq(emailProviderAccounts.userId, userId));
+    }
+    
+    const [updated] = await db.update(emailProviderAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(emailProviderAccounts.id, id),
+        eq(emailProviderAccounts.userId, userId)
+      ))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteEmailProviderAccount(id: number, userId: string): Promise<void> {
+    await db.delete(emailProviderAccounts)
+      .where(and(
+        eq(emailProviderAccounts.id, id),
+        eq(emailProviderAccounts.userId, userId)
+      ));
+  }
+
+  // Email Sequences
+  async createEmailSequence(sequence: InsertEmailSequence): Promise<EmailSequence> {
+    const [created] = await db.insert(emailSequences).values(sequence).returning();
+    return created;
+  }
+
+  async getEmailSequencesByCampaign(campaignId: number): Promise<EmailSequence[]> {
+    return db.select().from(emailSequences)
+      .where(eq(emailSequences.campaignId, campaignId))
+      .orderBy(emailSequences.stepNumber);
+  }
+
+  async updateEmailSequence(id: number, updates: Partial<EmailSequence>): Promise<EmailSequence | null> {
+    const [updated] = await db.update(emailSequences)
+      .set(updates)
+      .where(eq(emailSequences.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteEmailSequence(id: number): Promise<void> {
+    await db.delete(emailSequences).where(eq(emailSequences.id, id));
   }
 }
 

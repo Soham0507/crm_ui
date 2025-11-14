@@ -389,3 +389,56 @@ export interface CustomTableSchema {
 export type CustomTableWithRecords = CustomTable & {
   records: CustomTableRecord[];
 };
+
+// Email Provider Accounts (Gmail/Outlook OAuth)
+export const emailProviderAccounts = pgTable('email_provider_accounts', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 20 }).notNull(), // 'gmail', 'outlook'
+  email: varchar('email', { length: 255 }).notNull(),
+  displayName: varchar('display_name', { length: 255 }),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiry: timestamp('token_expiry'),
+  isActive: boolean('is_active').notNull().default(true),
+  isDefault: boolean('is_default').notNull().default(false),
+  dailyLimit: integer('daily_limit').notNull().default(500),
+  sentToday: integer('sent_today').notNull().default(0),
+  lastResetDate: timestamp('last_reset_date'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+});
+
+// Email Sequences (Multi-step campaigns)
+export const emailSequences = pgTable('email_sequences', {
+  id: serial('id').primaryKey(),
+  campaignId: integer('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  stepNumber: integer('step_number').notNull(),
+  templateId: integer('template_id').references(() => emailTemplates.id),
+  delayDays: integer('delay_days').notNull().default(0),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Insert schemas for new tables
+export const insertEmailProviderAccountSchema = createInsertSchema(emailProviderAccounts).omit({
+  id: true,
+  sentToday: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertEmailSequenceSchema = createInsertSchema(emailSequences).omit({
+  id: true,
+  createdAt: true
+});
+
+// Select types for new tables
+export type EmailProviderAccount = typeof emailProviderAccounts.$inferSelect;
+export type EmailSequence = typeof emailSequences.$inferSelect;
+
+// Insert types for new tables
+export type InsertEmailProviderAccount = z.infer<typeof insertEmailProviderAccountSchema>;
+export type InsertEmailSequence = z.infer<typeof insertEmailSequenceSchema>;

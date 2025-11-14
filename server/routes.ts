@@ -1321,6 +1321,81 @@ Best regards,
       res.status(500).json({ message: "Failed to generate email with AI" });
     }
   });
+
+  // Email Provider Accounts
+  app.get("/api/email-accounts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const accounts = await storage.getEmailProviderAccounts(userId);
+      res.json(accounts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch email accounts" });
+    }
+  });
+
+  app.post("/api/email-accounts/connect", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { provider } = req.body;
+      
+      // In a real app, this would handle OAuth flow
+      // For demo, we'll create a mock account
+      const userInfo = await storage.getUser(userId);
+      const mockEmail = provider === 'gmail' 
+        ? `${userInfo?.email?.split('@')[0]}@gmail.com`
+        : `${userInfo?.email?.split('@')[0]}@outlook.com`;
+      
+      const account = await storage.createEmailProviderAccount({
+        userId,
+        provider,
+        email: mockEmail,
+        displayName: userInfo?.name || mockEmail,
+        isActive: true,
+        isDefault: false,
+        dailyLimit: 500,
+        // In real app, these would come from OAuth
+        accessToken: 'mock_access_token',
+        refreshToken: 'mock_refresh_token',
+        tokenExpiry: new Date(Date.now() + 3600000) // 1 hour from now
+      });
+      
+      res.json(account);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to connect email account" });
+    }
+  });
+
+  app.patch("/api/email-accounts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const account = await storage.updateEmailProviderAccount(
+        parseInt(req.params.id),
+        userId,
+        req.body
+      );
+      
+      if (!account) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      
+      res.json(account);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update email account" });
+    }
+  });
+
+  app.delete("/api/email-accounts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.deleteEmailProviderAccount(
+        parseInt(req.params.id),
+        userId
+      );
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete email account" });
+    }
+  });
   
   // Find contacts from company website (web scraping)
   app.post("/api/outreach/find-contacts", isAuthenticated, async (req: any, res) => {
