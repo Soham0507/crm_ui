@@ -409,20 +409,34 @@ export default function LeadFinder({ icpId, onLeadsFound }: LeadFinderProps) {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-gray-400" />
-                              <div>
-                                <p className="text-sm">{data.company?.name}</p>
-                                <p className="text-xs text-gray-500">{data.company?.industry}</p>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4 text-gray-400" />
+                                <div>
+                                  <p className="text-sm font-medium">{data.company?.name}</p>
+                                  <p className="text-xs text-gray-500">{data.company?.industry}</p>
+                                </div>
                               </div>
+                              {data.company?.size && (
+                                <Badge variant="outline" className="text-xs">
+                                  {data.company.size} employees
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getEmailStatusIcon(lead)}
-                              <span className="text-sm">
-                                {data.email?.value || 'Not found'}
-                              </span>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                {getEmailStatusIcon(lead)}
+                                <span className="text-sm font-medium">
+                                  {data.email?.value || 'Not found'}
+                                </span>
+                              </div>
+                              {data.email?.confidence && (
+                                <div className="text-xs text-gray-500">
+                                  {data.email.confidence}% confidence
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
