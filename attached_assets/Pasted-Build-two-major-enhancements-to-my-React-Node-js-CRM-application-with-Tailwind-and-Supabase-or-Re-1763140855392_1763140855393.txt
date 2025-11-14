@@ -1,0 +1,135 @@
+Build two major enhancements to my React + Node.js CRM application with Tailwind and Supabase (or Replit DB):
+
+1. Email Composer + Sending + AI Drafting
+Build a full email module with:
+
+Email composer UI (To, Subject, Body)
+
+“Generate with AI” button using OpenAI GPT API
+
+Capabilities: write email, rewrite, summarize, change tone
+
+Ability to send email via backend using:
+
+Gmail API (OAuth) or
+
+SMTP via Nodemailer
+
+Save sent email into Supabase/Replit DB in a table: emails
+
+Associate email with contact record via contact_id
+
+Email history component inside each contact profile
+
+UI Requirements:
+
+Rich text editor (simple)
+
+Sidebar with email templates
+
+AI assistant panel (suggest subject lines, rewrite body)
+
+Backend Requirements:
+
+/api/send-email endpoint
+
+Gmail OAuth flow (or SMTP config)
+
+Logging into DB:
+
+{
+  "contact_id": "...",
+  "to": "email@domain.com",
+  "subject": "...",
+  "body": "...",
+  "status": "sent",
+  "timestamp": "..."
+}
+
+2. ICP Email Finder (Web Scraping + AI Extraction)
+Build a tool where the CRM user enters:
+
+A company name OR company domain
+
+Workflow:
+
+Backend scrapes the public website:
+
+Homepage
+
+“About”, “Team”, “Leadership”
+
+“Contact”, “Careers”
+
+Any page with mailto:
+
+Extract:
+
+Emails
+
+Names
+
+Roles/Titles
+
+Social links if visible
+
+Use AI to:
+
+Clean + dedupe extracted text
+
+Predict likely email patterns if no emails found
+Example patterns: {first}.{last}@domain.com
+
+Return structured JSON:
+
+[
+  {
+    "name": "John Smith",
+    "role": "CTO",
+    "email": "john@company.com",
+    "source": "team page"
+  }
+]
+
+UI Requirements:
+
+Input box for company domain
+
+“Generate Contacts” button
+
+Loading spinner
+
+Table of extracted contacts
+
+Ability to:
+
+Save to CRM contacts
+
+Merge duplicates
+
+Backend Requirements:
+
+/api/find-contacts endpoint
+
+Use Cheerio/Puppeteer to scrape pages
+
+Use OpenAI GPT to clean + format extracted results
+
+Folder Structure to Generate:
+/components/EmailComposer.jsx
+/components/EmailHistory.jsx
+/components/ICPEmailFinder.jsx
+/api/sendEmail.js
+/api/findContacts.js
+/utils/scraper.js
+/utils/aiFormatter.js
+
+Deliverables:
+
+Fully working email composer with AI drafting + send capability
+
+Fully working ICP contact finder with scraper + AI cleaning
+
+All results stored in Supabase/Replit DB
+
+Modern responsive UI
