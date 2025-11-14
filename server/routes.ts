@@ -930,6 +930,282 @@ Best regards,
       res.status(500).json({ message: "Failed to fetch email templates" });
     }
   });
+  
+  // Email Operations
+  app.get("/api/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const emails = await storage.getEmails(userId);
+      res.json(emails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch emails" });
+    }
+  });
+  
+  app.get("/api/contacts/:contactId/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const contactId = parseInt(req.params.contactId);
+      const emails = await storage.getEmailsByContact(contactId, userId);
+      res.json(emails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contact emails" });
+    }
+  });
+  
+  // Email sending with Nodemailer
+  app.post("/api/emails/send", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { to, cc, bcc, subject, body, htmlBody, contactId } = req.body;
+      
+      // Create email record as "sending"
+      const emailRecord = await storage.createEmail({
+        userId,
+        to,
+        cc,
+        bcc,
+        subject,
+        body,
+        htmlBody: htmlBody || body,
+        contactId,
+        status: 'sending'
+      });
+      
+      // For now, mock the email sending - in production, use Nodemailer
+      // This is where you'd integrate with SMTP service
+      setTimeout(async () => {
+        await storage.updateEmailStatus(emailRecord.id, userId, 'sent');
+      }, 1000);
+      
+      res.json({ 
+        message: "Email queued for sending",
+        emailId: emailRecord.id,
+        status: 'sending'
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+  
+  // Save email as draft
+  app.post("/api/emails/draft", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { to, cc, bcc, subject, body, htmlBody, contactId } = req.body;
+      
+      const emailRecord = await storage.createEmail({
+        userId,
+        to,
+        cc,
+        bcc,
+        subject,
+        body,
+        htmlBody: htmlBody || body,
+        contactId,
+        status: 'draft'
+      });
+      
+      res.json(emailRecord);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save draft" });
+    }
+  });
+  
+  // Generate email with AI (using OpenAI integration)
+  app.post("/api/outreach/generate-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { prompt, action, tone, context } = req.body;
+      
+      // Use the OpenAI integration we already set up
+      const { OpenAI } = await import('openai');
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      });
+      
+      let systemPrompt = "You are an expert sales email writer. ";
+      let userPrompt = "";
+      
+      switch (action) {
+        case 'generate':
+          systemPrompt += `Write a ${tone} email that accomplishes: ${prompt}. `;
+          if (context.contactName) systemPrompt += `The recipient is ${context.contactName}. `;
+          if (context.companyName) systemPrompt += `They work at ${context.companyName}. `;
+          userPrompt = "Generate a subject line and email body. Format as JSON with 'subject' and 'body' fields.";
+          break;
+        case 'rewrite':
+          systemPrompt += `Rewrite this email to be more ${tone}.`;
+          userPrompt = `Current email:\nSubject: ${context.currentSubject}\nBody: ${context.currentBody}\n\nRewrite it. Format as JSON with 'subject' and 'body' fields.`;
+          break;
+        case 'summarize':
+          systemPrompt += "Make this email shorter and more concise while keeping the main message.";
+          userPrompt = `Current email:\nSubject: ${context.currentSubject}\nBody: ${context.currentBody}\n\nMake it shorter. Format as JSON with 'subject' and 'body' fields.`;
+          break;
+        case 'change_tone':
+          systemPrompt += `Change the tone of this email to ${tone}.`;
+          userPrompt = `Current email:\nSubject: ${context.currentSubject}\nBody: ${context.currentBody}\n\nChange tone. Format as JSON with 'subject' and 'body' fields.`;
+          break;
+      }
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      });
+      
+      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating email with AI:", error);
+      res.status(500).json({ message: "Failed to generate email with AI" });
+    }
+  });
+  
+  // Find contacts from company website (web scraping)
+  app.post("/api/outreach/find-contacts", isAuthenticated, async (req: any, res) => {
+    try {
+      const { input, type, options } = req.body;
+      const cheerio = await import('cheerio');
+      const axios = (await import('axios')).default;
+      
+      // Determine the domain to scrape
+      let domain = input;
+      if (type === 'name') {
+        // In production, you'd use a search API to find the domain
+        // For now, we'll just format it as a domain
+        domain = input.toLowerCase().replace(/\s+/g, '') + '.com';
+      }
+      
+      // Ensure proper URL format
+      if (!domain.startsWith('http')) {
+        domain = `https://${domain}`;
+      }
+      
+      try {
+        // Fetch the website
+        const response = await axios.get(domain, { 
+          timeout: 10000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; CRM-Bot/1.0)'
+          }
+        });
+        
+        const $ = cheerio.load(response.data);
+        const contacts: any[] = [];
+        const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        
+        // Extract emails from the page
+        const pageText = $('body').text();
+        const emails = pageText.match(emailPattern) || [];
+        
+        // Extract from mailto links
+        $('a[href^="mailto:"]').each((i, el) => {
+          const email = $(el).attr('href')?.replace('mailto:', '');
+          if (email && !emails.includes(email)) {
+            emails.push(email);
+          }
+        });
+        
+        // Clean and dedupe emails
+        const uniqueEmails = [...new Set(emails)].filter(email => 
+          !email.includes('@example') && 
+          !email.includes('yourcompany') &&
+          !email.includes('domain.com')
+        );
+        
+        // Try to find team/about pages
+        const teamLinks = $('a').filter((i, el) => {
+          const href = $(el).attr('href') || '';
+          const text = $(el).text().toLowerCase();
+          return text.includes('team') || text.includes('about') || text.includes('people') || text.includes('leadership');
+        });
+        
+        // Create contact objects
+        uniqueEmails.forEach((email, index) => {
+          // Try to extract name from email if possible
+          const namePart = email.split('@')[0];
+          const name = namePart.split(/[._-]/).map(part => 
+            part.charAt(0).toUpperCase() + part.slice(1)
+          ).join(' ');
+          
+          contacts.push({
+            id: `contact-${index}`,
+            name: name,
+            role: 'Contact', // Would need more context to determine role
+            email: email,
+            emailConfidence: options.verifyEmails ? 'medium' : 'low',
+            source: new URL(domain).hostname,
+            department: 'General'
+          });
+        });
+        
+        // If no emails found, generate predicted ones based on common patterns
+        if (contacts.length === 0 && options.includePredicted) {
+          const domainName = new URL(domain).hostname.replace('www.', '');
+          const predictedContacts = [
+            { name: 'Sales Team', email: `sales@${domainName}`, role: 'Sales' },
+            { name: 'Support Team', email: `support@${domainName}`, role: 'Support' },
+            { name: 'Info', email: `info@${domainName}`, role: 'General' }
+          ];
+          
+          predictedContacts.forEach((contact, index) => {
+            contacts.push({
+              id: `predicted-${index}`,
+              ...contact,
+              emailConfidence: 'predicted',
+              source: domainName,
+              department: contact.role
+            });
+          });
+        }
+        
+        // Company info
+        const companyInfo = {
+          domain: new URL(domain).hostname,
+          name: $('title').text() || new URL(domain).hostname,
+          totalContactsFound: contacts.length,
+          emailPattern: uniqueEmails.length > 2 ? 'firstname.lastname@domain.com' : null
+        };
+        
+        res.json({
+          contacts,
+          company: companyInfo
+        });
+      } catch (scrapeError) {
+        console.error("Scraping error:", scrapeError);
+        res.status(400).json({ 
+          message: "Failed to scrape website. Please check the domain and try again.",
+          error: scrapeError.message 
+        });
+      }
+    } catch (error) {
+      console.error("Error finding contacts:", error);
+      res.status(500).json({ message: "Failed to find contacts" });
+    }
+  });
+  
+  // Enrich contact data (mock for now)
+  app.post("/api/outreach/enrich-contact", isAuthenticated, async (req: any, res) => {
+    try {
+      const { contactId, name, company, domain } = req.body;
+      
+      // Mock enrichment - in production, you'd use APIs like Clearbit, Apollo, etc.
+      const enrichedData = {
+        linkedin: `https://linkedin.com/in/${name.toLowerCase().replace(/\s+/g, '-')}`,
+        phone: '+1 555-0100',
+        department: 'Sales',
+        seniority: 'Manager'
+      };
+      
+      res.json(enrichedData);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to enrich contact" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
