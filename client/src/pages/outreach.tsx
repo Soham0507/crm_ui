@@ -6,16 +6,25 @@ import { Badge } from "@/components/ui/badge";
 import Sidebar from "@/components/sidebar";
 import ICPBuilder from "@/components/outreach/icp-builder";
 import LeadFinder from "@/components/outreach/lead-finder";
+import ICPEmailFinder from "@/components/outreach/icp-email-finder";
 import CampaignBuilder from "@/components/outreach/campaign-builder";
 import CampaignDashboard from "@/components/outreach/campaign-dashboard";
+import EmailComposer from "@/components/outreach/email-composer";
 import { useToast } from "@/hooks/use-toast";
-import { Target, Users, Mail, BarChart3, Sparkles } from "lucide-react";
+import { Target, Users, Mail, BarChart3, Sparkles, Globe, Send } from "lucide-react";
 import type { ICPProfile, Campaign } from "@shared/schema";
 
 export default function Outreach() {
   const [activeTab, setActiveTab] = useState("icp");
   const [selectedICPId, setSelectedICPId] = useState<number | null>(null);
   const [selectedListId, setSelectedListId] = useState<number | null>(null);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [emailComposerContact, setEmailComposerContact] = useState<{
+    id?: number;
+    email?: string;
+    name?: string;
+    company?: string;
+  }>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -158,6 +167,10 @@ export default function Outreach() {
               <Users className="h-4 w-4" />
               Lead Finder
             </TabsTrigger>
+            <TabsTrigger value="email-finder" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Email Finder
+            </TabsTrigger>
             <TabsTrigger value="campaigns" className="gap-2" disabled={!selectedListId}>
               <Mail className="h-4 w-4" />
               Campaign Builder
@@ -182,6 +195,25 @@ export default function Outreach() {
             />
           </TabsContent>
 
+          <TabsContent value="email-finder" className="mt-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Email Finder</h2>
+                  <p className="text-gray-500">Extract contacts from company websites</p>
+                </div>
+                <Button 
+                  onClick={() => setEmailComposerOpen(true)}
+                  className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Compose Email
+                </Button>
+              </div>
+              <ICPEmailFinder />
+            </div>
+          </TabsContent>
+
           <TabsContent value="campaigns" className="mt-6">
             <CampaignBuilder 
               icpId={selectedICPId}
@@ -193,6 +225,16 @@ export default function Outreach() {
             <CampaignDashboard campaigns={campaigns} />
           </TabsContent>
         </Tabs>
+
+        {/* Email Composer Dialog */}
+        <EmailComposer
+          open={emailComposerOpen}
+          onOpenChange={setEmailComposerOpen}
+          contactId={emailComposerContact.id}
+          contactEmail={emailComposerContact.email}
+          contactName={emailComposerContact.name}
+          companyName={emailComposerContact.company}
+        />
       </div>
     </div>
   );
