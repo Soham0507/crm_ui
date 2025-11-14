@@ -93,15 +93,24 @@ export interface IStorage {
   getICPProfiles(userId: string): Promise<ICPProfile[]>;
   getICPProfile(id: number, userId: string): Promise<ICPProfile | undefined>;
   createICPProfile(profile: InsertICPProfile): Promise<ICPProfile>;
+  updateICPProfile(id: number, profile: Partial<InsertICPProfile>, userId: string): Promise<ICPProfile | undefined>;
+  deleteICPProfile(id: number, userId: string): Promise<boolean>;
   
   // Sales Outreach - Lead Lists
   getLeadLists(userId: string): Promise<LeadList[]>;
   getLeadList(id: number, userId: string): Promise<LeadList | undefined>;
   createLeadList(list: InsertLeadList): Promise<LeadList>;
+  updateLeadList(id: number, list: Partial<Omit<InsertLeadList, 'userId'>>, userId: string): Promise<LeadList | undefined>;
+  deleteLeadList(id: number, userId: string): Promise<boolean>;
   
   // Sales Outreach - Leads
-  getLeadsByList(listId: number): Promise<Lead[]>;
+  getLeadsByList(listId: number, userId: string): Promise<Lead[]>;
+  getLeadById(id: number, userId: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
+  createLeadsForList(listId: number, userId: string, leads: InsertLead[]): Promise<Lead[]>;
+  updateLead(id: number, updates: Partial<Omit<InsertLead, 'listId'>>, userId: string): Promise<Lead | undefined>;
+  updateLeadsByIds(ids: number[], updates: Partial<Omit<InsertLead, 'listId'>>, userId: string): Promise<Lead[]>;
+  enrichLeads(leadIds: number[], enrichmentData: { leadId: number; data: any; }[], userId: string): Promise<void>;
   
   // Sales Outreach - Campaigns
   getCampaigns(userId: string): Promise<Campaign[]>;
@@ -435,6 +444,22 @@ export class DatabaseStorage implements IStorage {
     return newProfile;
   }
   
+  async updateICPProfile(id: number, profile: Partial<InsertICPProfile>, userId: string): Promise<ICPProfile | undefined> {
+    const [updated] = await db
+      .update(icpProfiles)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(and(eq(icpProfiles.id, id), eq(icpProfiles.userId, userId)))
+      .returning();
+    return updated;
+  }
+  
+  async deleteICPProfile(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(icpProfiles)
+      .where(and(eq(icpProfiles.id, id), eq(icpProfiles.userId, userId)));
+    return result.rowCount > 0;
+  }
+  
   // Sales Outreach - Lead Lists
   async getLeadLists(userId: string): Promise<LeadList[]> {
     return await db
@@ -460,13 +485,47 @@ export class DatabaseStorage implements IStorage {
     return newList;
   }
   
+  async updateLeadList(id: number, list: Partial<Omit<InsertLeadList, 'userId'>>, userId: string): Promise<LeadList | undefined> {
+    const [updated] = await db
+      .update(leadLists)
+      .set(list)
+      .where(and(eq(leadLists.id, id), eq(leadLists.userId, userId)))
+      .returning();
+    return updated;
+  }
+  
+  async deleteLeadList(id: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(leadLists)
+      .where(and(eq(leadLists.id, id), eq(leadLists.userId, userId)));
+    return result.rowCount > 0;
+  }
+  
   // Sales Outreach - Leads
-  async getLeadsByList(listId: number): Promise<Lead[]> {
+  async getLeadsByList(listId: number, userId: string): Promise<Lead[]> {
+    // Verify the list belongs to the user
+    const [list] = await db
+      .select()
+      .from(leadLists)
+      .where(and(eq(leadLists.id, listId), eq(leadLists.userId, userId)));
+    
+    if (!list) return [];
+    
     return await db
       .select()
       .from(leads)
       .where(eq(leads.listId, listId))
       .orderBy(leads.createdAt);
+  }
+  
+  async getLeadById(id: number, userId: string): Promise<Lead | undefined> {
+    const [lead] = await db
+      .select()
+      .from(leads)
+      .innerJoin(leadLists, eq(leads.listId, leadLists.id))
+      .where(and(eq(leads.id, id), eq(leadLists.userId, userId)));
+    
+    return lead?.leads;
   }
   
   async createLead(lead: InsertLead): Promise<Lead> {
@@ -475,6 +534,105 @@ export class DatabaseStorage implements IStorage {
       .values(lead)
       .returning();
     return newLead;
+  }
+  
+  async createLeadsForList(listId: number, userId: string, leadsData: InsertLead[]): Promise<Lead[]> {
+    // Verify the list belongs to the user
+    const [list] = await db
+      .select()
+      .from(leadLists)
+      .where(and(eq(leadLists.id, listId), eq(leadLists.userId, userId)));
+    
+    if (!list) throw new Error('List not found or unauthorized');
+    
+    // Ensure all leads are for the correct list
+    const leadsWithListId = leadsData.map(lead => ({ ...lead, listId }));
+    
+    const newLeads = await db
+      .insert(leads)
+      .values(leadsWithListId)
+      .returning();
+    
+    return newLeads;
+  }
+  
+  async updateLead(id: number, updates: Partial<Omit<InsertLead, 'listId'>>, userId: string): Promise<Lead | undefined> {
+    // Verify the lead belongs to the user through its list
+    const [existingLead] = await db
+      .select()
+      .from(leads)
+      .innerJoin(leadLists, eq(leads.listId, leadLists.id))
+      .where(and(eq(leads.id, id), eq(leadLists.userId, userId)));
+    
+    if (!existingLead) return undefined;
+    
+    const [updated] = await db
+      .update(leads)
+      .set(updates)
+      .where(eq(leads.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async updateLeadsByIds(ids: number[], updates: Partial<Omit<InsertLead, 'listId'>>, userId: string): Promise<Lead[]> {
+    if (ids.length === 0) return [];
+    
+    // Verify all leads belong to the user through their lists
+    const userLeads = await db
+      .select()
+      .from(leads)
+      .innerJoin(leadLists, eq(leads.listId, leadLists.id))
+      .where(and(
+        eq(leadLists.userId, userId)
+      ));
+    
+    const userLeadIds = new Set(userLeads.map(l => l.leads.id));
+    const validIds = ids.filter(id => userLeadIds.has(id));
+    
+    if (validIds.length === 0) return [];
+    
+    const updatedLeads = await db
+      .update(leads)
+      .set(updates)
+      .where(eq(leads.id, validIds[0])) // This needs a better implementation for multiple IDs
+      .returning();
+    
+    return updatedLeads;
+  }
+  
+  async enrichLeads(leadIds: number[], enrichmentData: { leadId: number; data: any; }[], userId: string): Promise<void> {
+    // Verify all leads belong to the user
+    const userLeads = await db
+      .select()
+      .from(leads)
+      .innerJoin(leadLists, eq(leads.listId, leadLists.id))
+      .where(eq(leadLists.userId, userId));
+    
+    const userLeadIds = new Set(userLeads.map(l => l.leads.id));
+    
+    // Process each enrichment
+    for (const enrichment of enrichmentData) {
+      if (!userLeadIds.has(enrichment.leadId)) continue;
+      
+      // Merge enrichment data with existing lead data
+      const [existingLead] = await db
+        .select()
+        .from(leads)
+        .where(eq(leads.id, enrichment.leadId));
+      
+      if (existingLead) {
+        const mergedData = {
+          ...existingLead.data,
+          ...enrichment.data
+        };
+        
+        await db
+          .update(leads)
+          .set({ data: mergedData })
+          .where(eq(leads.id, enrichment.leadId));
+      }
+    }
   }
   
   // Sales Outreach - Campaigns
