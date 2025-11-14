@@ -42,7 +42,7 @@ import {
   Globe,
   Shield,
 } from "lucide-react";
-import { SiGmail, SiMicrosoftoutlook } from "react-icons/si";
+import { SiGmail } from "react-icons/si";
 
 interface EmailProviderAccount {
   id: number;
@@ -165,7 +165,7 @@ export function EmailAccounts() {
       case 'gmail':
         return <SiGmail className="h-5 w-5 text-red-500" />;
       case 'outlook':
-        return <SiMicrosoftoutlook className="h-5 w-5 text-blue-500" />;
+        return <Mail className="h-5 w-5 text-blue-500" />;
       default:
         return <Mail className="h-5 w-5" />;
     }
@@ -335,7 +335,7 @@ export function EmailAccounts() {
               onClick={() => handleConnect('outlook')}
               disabled={connectMutation.isPending}
             >
-              <SiMicrosoftoutlook className="h-6 w-6 text-blue-500 mr-3" />
+              <Mail className="h-6 w-6 text-blue-500 mr-3" />
               <div className="text-left">
                 <p className="font-medium">Outlook</p>
                 <p className="text-sm text-gray-500">Connect your Microsoft account</p>
