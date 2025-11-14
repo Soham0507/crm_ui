@@ -8,6 +8,7 @@ import {
   timestamp,
   real,
   jsonb,
+  json,
   index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -229,6 +230,30 @@ export const unsubscribes = pgTable('unsubscribes', {
   createdAt: timestamp('created_at').defaultNow()
 });
 
+// Emails - Sent emails history
+export const emails = pgTable("emails", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  contactId: integer("contact_id").references(() => contacts.id, { onDelete: "cascade" }),
+  campaignId: integer("campaign_id"),
+  to: varchar("to", { length: 255 }).notNull(),
+  cc: text("cc"),
+  bcc: text("bcc"),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  htmlBody: text("html_body"),
+  status: varchar("status", { length: 50 }).notNull().default("draft"), // draft, sending, sent, failed
+  sentAt: timestamp("sent_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  repliedAt: timestamp("replied_at"),
+  messageId: varchar("message_id", { length: 255 }),
+  threadId: varchar("thread_id", { length: 255 }),
+  error: text("error"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Types for Sales Outreach
 export interface ICPConfig {
   company: {
@@ -311,6 +336,11 @@ export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit
   createdAt: true
 });
 
+export const insertEmailSchema = createInsertSchema(emails).omit({
+  id: true,
+  createdAt: true
+});
+
 // Select types
 export type ICPProfile = typeof icpProfiles.$inferSelect;
 export type LeadList = typeof leadLists.$inferSelect;
@@ -320,6 +350,7 @@ export type CampaignStep = typeof campaignSteps.$inferSelect;
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type Delivery = typeof deliveries.$inferSelect;
 export type Unsubscribe = typeof unsubscribes.$inferSelect;
+export type Email = typeof emails.$inferSelect;
 
 // Insert types
 export type InsertICPProfile = z.infer<typeof insertICPProfileSchema>;
@@ -327,6 +358,7 @@ export type InsertLeadList = z.infer<typeof insertLeadListSchema>;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type InsertEmail = z.infer<typeof insertEmailSchema>;
 
 export type ContactWithDetails = Contact & {
   notes: Note[];
