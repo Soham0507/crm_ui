@@ -10,6 +10,7 @@ import ICPEmailFinder from "@/components/outreach/icp-email-finder";
 import CampaignBuilder from "@/components/outreach/campaign-builder";
 import CampaignDashboard from "@/components/outreach/campaign-dashboard";
 import EmailComposer from "@/components/outreach/email-composer";
+import { EmailAccounts } from "@/components/outreach/email-accounts";
 import { useToast } from "@/hooks/use-toast";
 import { Target, Users, Mail, BarChart3, Sparkles, Globe, Send } from "lucide-react";
 import type { ICPProfile, Campaign } from "@shared/schema";
@@ -173,6 +174,10 @@ export default function Outreach() {
               <Globe className="h-4 w-4" />
               Email Finder
             </TabsTrigger>
+            <TabsTrigger value="email-accounts" className="gap-2">
+              <Mail className="h-4 w-4" />
+              Email Accounts
+            </TabsTrigger>
             <TabsTrigger value="campaigns" className="gap-2" disabled={!selectedListId}>
               <Mail className="h-4 w-4" />
               Campaign Builder
@@ -214,6 +219,10 @@ export default function Outreach() {
               </div>
               <ICPEmailFinder />
             </div>
+          </TabsContent>
+
+          <TabsContent value="email-accounts" className="mt-6">
+            <EmailAccounts />
           </TabsContent>
 
           <TabsContent value="campaigns" className="mt-6">
