@@ -2,13 +2,27 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertContactSchema, insertNoteSchema, insertTaskSchema, insertCustomTableSchema, insertCustomTableRecordSchema, type CustomTableSchema } from "@shared/schema";
+import { 
+  insertContactSchema, 
+  insertNoteSchema, 
+  insertTaskSchema, 
+  insertCustomTableSchema, 
+  insertCustomTableRecordSchema, 
+  insertICPProfileSchema,
+  insertLeadListSchema,
+  insertLeadSchema,
+  type CustomTableSchema,
+  type ICPProfile,
+  type Lead 
+} from "@shared/schema";
 import { generateContactInsights, generateBulkInsights } from "./aiInsights";
+import { searchLeads, enrichLead, verifyEmail } from "./services/mockLeadProvider";
 import { z } from "zod";
 import multer from "multer";
 import csvParser from "csv-parser";
 import { Parser } from "json2csv";
 import fs from "fs";
+import OpenAI from "openai";
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -917,6 +931,249 @@ Best regards,
       res.json(mockEmail);
     } catch (error) {
       res.status(500).json({ message: "Failed to generate email" });
+    }
+  });
+
+  // Sales Outreach - ICP Profiles
+  app.get("/api/icp-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profiles = await storage.getICPProfiles(userId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching ICP profiles:", error);
+      res.status(500).json({ message: "Failed to fetch ICP profiles" });
+    }
+  });
+
+  app.get("/api/icp-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const profile = await storage.getICPProfile(id, userId);
+      if (!profile) {
+        return res.status(404).json({ message: "ICP profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching ICP profile:", error);
+      res.status(500).json({ message: "Failed to fetch ICP profile" });
+    }
+  });
+
+  app.post("/api/icp-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertICPProfileSchema.parse({ ...req.body, userId });
+      const profile = await storage.createICPProfile(validatedData);
+      res.status(201).json(profile);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid ICP profile data", errors: error.errors });
+      }
+      console.error("Error creating ICP profile:", error);
+      res.status(500).json({ message: "Failed to create ICP profile" });
+    }
+  });
+
+  // Generate ICP with AI
+  app.post("/api/icp-profiles/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({ message: "Prompt is required" });
+      }
+
+      // Initialize OpenAI client with Replit AI integration
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      });
+
+      const systemPrompt = `You are an expert sales strategist helping to define Ideal Customer Profiles (ICPs). 
+        Generate a comprehensive ICP based on the user's description. Return a JSON object with the following structure:
+        {
+          "config": {
+            "company": {
+              "industries": ["array of target industries"],
+              "geo": ["array of target locations"],
+              "size": ["1-10", "11-50", "51-200", "201-500", "500+"],
+              "tech": ["array of technologies they use"]
+            },
+            "personas": [{
+              "title": ["array of job titles"],
+              "seniority": ["C-Level", "VP", "Director", "Manager", "Individual"],
+              "functions": ["array of job functions"]
+            }],
+            "pain_points": ["array of pain points"],
+            "triggers": ["array of buying triggers"],
+            "value_props": ["array of value propositions"],
+            "keywords": ["array of relevant keywords"]
+          },
+          "narrative": "A comprehensive narrative description of the ideal customer"
+        }`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      });
+
+      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating ICP with AI:", error);
+      res.status(500).json({ message: "Failed to generate ICP with AI" });
+    }
+  });
+
+  // Sales Outreach - Lead Lists
+  app.get("/api/lead-lists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const lists = await storage.getLeadLists(userId);
+      res.json(lists);
+    } catch (error) {
+      console.error("Error fetching lead lists:", error);
+      res.status(500).json({ message: "Failed to fetch lead lists" });
+    }
+  });
+
+  app.get("/api/lead-lists/:id/leads", isAuthenticated, async (req: any, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const leads = await storage.getLeadsByList(listId, userId);
+      res.json(leads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  app.post("/api/lead-lists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, icpId, leadIds } = req.body;
+      
+      // Create the list
+      const list = await storage.createLeadList({ name, icpId, userId });
+      
+      // If leadIds provided, create the leads for this list
+      if (leadIds && leadIds.length > 0) {
+        // This would need to move existing leads to the new list
+        // For now, we'll skip this part
+      }
+      
+      res.status(201).json({ ...list, leadCount: leadIds?.length || 0 });
+    } catch (error) {
+      console.error("Error creating lead list:", error);
+      res.status(500).json({ message: "Failed to create lead list" });
+    }
+  });
+
+  // Sales Outreach - Lead Search
+  app.post("/api/leads/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { icpId, provider = "mock" } = req.body;
+      
+      if (!icpId) {
+        return res.status(400).json({ message: "ICP ID is required" });
+      }
+      
+      // Get the ICP profile
+      const icpProfile = await storage.getICPProfile(icpId, userId);
+      if (!icpProfile) {
+        return res.status(404).json({ message: "ICP profile not found" });
+      }
+      
+      // Search for leads using the mock provider
+      const leadData = await searchLeads(icpProfile, 30);
+      
+      // Create a new list for these leads
+      const list = await storage.createLeadList({
+        name: `${icpProfile.name} - Search ${new Date().toLocaleDateString()}`,
+        icpId,
+        userId
+      });
+      
+      // Bulk create the leads
+      const leads = await storage.createLeadsForList(list.id, userId, leadData);
+      
+      res.json({ listId: list.id, count: leads.length });
+    } catch (error) {
+      console.error("Error searching leads:", error);
+      res.status(500).json({ message: "Failed to search leads" });
+    }
+  });
+
+  // Sales Outreach - Lead Enrichment
+  app.post("/api/leads/enrich", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { leadIds, fields } = req.body;
+      
+      if (!leadIds || leadIds.length === 0) {
+        return res.status(400).json({ message: "Lead IDs are required" });
+      }
+      
+      let enrichedCount = 0;
+      const enrichmentData = [];
+      
+      for (const leadId of leadIds) {
+        const lead = await storage.getLeadById(leadId, userId);
+        if (lead) {
+          const enriched = await enrichLead(lead);
+          enrichmentData.push({ leadId, data: enriched });
+          enrichedCount++;
+        }
+      }
+      
+      // Update leads with enrichment data
+      await storage.enrichLeads(leadIds, enrichmentData, userId);
+      
+      res.json({ enriched: enrichedCount });
+    } catch (error) {
+      console.error("Error enriching leads:", error);
+      res.status(500).json({ message: "Failed to enrich leads" });
+    }
+  });
+
+  // Sales Outreach - Email Verification
+  app.post("/api/leads/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { leadIds } = req.body;
+      
+      if (!leadIds || leadIds.length === 0) {
+        return res.status(400).json({ message: "Lead IDs are required" });
+      }
+      
+      let verifiedCount = 0;
+      
+      for (const leadId of leadIds) {
+        const lead = await storage.getLeadById(leadId, userId);
+        if (lead && lead.email) {
+          const status = await verifyEmail(lead.email);
+          const data = lead.data as any;
+          if (data.email) {
+            data.email.status = status;
+            await storage.updateLead(leadId, { data }, userId);
+            if (status === 'valid') verifiedCount++;
+          }
+        }
+      }
+      
+      res.json({ verified: verifiedCount });
+    } catch (error) {
+      console.error("Error verifying emails:", error);
+      res.status(500).json({ message: "Failed to verify emails" });
     }
   });
 
