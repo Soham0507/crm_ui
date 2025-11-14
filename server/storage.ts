@@ -12,6 +12,7 @@ import {
   campaigns,
   campaignSteps,
   emailTemplates,
+  emails,
   type Contact, 
   type InsertContact,
   type Note,
@@ -38,7 +39,9 @@ import {
   type InsertCampaign,
   type CampaignStep,
   type EmailTemplate,
-  type InsertEmailTemplate
+  type InsertEmailTemplate,
+  type Email,
+  type InsertEmail
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -112,6 +115,12 @@ export interface IStorage {
   // Sales Outreach - Email Templates  
   getEmailTemplates(userId: string): Promise<EmailTemplate[]>;
   createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  
+  // Emails - Sent emails management
+  getEmails(userId: string): Promise<Email[]>;
+  getEmailsByContact(contactId: number, userId: string): Promise<Email[]>;
+  createEmail(email: InsertEmail): Promise<Email>;
+  updateEmailStatus(id: number, userId: string, status: 'draft' | 'sending' | 'sent' | 'failed', error?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -524,6 +533,54 @@ export class DatabaseStorage implements IStorage {
       .values(template)
       .returning();
     return newTemplate;
+  }
+  
+  // Emails - Sent emails management
+  async getEmails(userId: string): Promise<Email[]> {
+    return await db
+      .select()
+      .from(emails)
+      .where(eq(emails.userId, userId))
+      .orderBy(emails.createdAt);
+  }
+  
+  async getEmailsByContact(contactId: number, userId: string): Promise<Email[]> {
+    return await db
+      .select()
+      .from(emails)
+      .where(and(
+        eq(emails.contactId, contactId),
+        eq(emails.userId, userId)
+      ))
+      .orderBy(emails.createdAt);
+  }
+  
+  async createEmail(email: InsertEmail): Promise<Email> {
+    const [newEmail] = await db
+      .insert(emails)
+      .values(email)
+      .returning();
+    return newEmail;
+  }
+  
+  async updateEmailStatus(id: number, userId: string, status: 'draft' | 'sending' | 'sent' | 'failed', error?: string): Promise<void> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (status === 'sent') {
+      updateData.sentAt = new Date();
+    }
+    
+    if (error) {
+      updateData.error = error;
+    }
+    
+    await db
+      .update(emails)
+      .set(updateData)
+      .where(and(eq(emails.id, id), eq(emails.userId, userId)));
   }
 }
 
