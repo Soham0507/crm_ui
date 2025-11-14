@@ -29,13 +29,15 @@ export default function Outreach() {
   const { toast } = useToast();
 
   // Fetch ICPs
-  const { data: icpProfiles = [] } = useQuery<ICPProfile[]>({
+  const { data: icpProfiles = [], isLoading: icpLoading, error: icpError } = useQuery<ICPProfile[]>({
     queryKey: ['/api/icp-profiles'],
+    retry: 1,
   });
 
   // Fetch campaigns
-  const { data: campaigns = [] } = useQuery<Campaign[]>({
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ['/api/campaigns'],
+    retry: 1,
   });
 
   const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
