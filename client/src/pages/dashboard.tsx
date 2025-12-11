@@ -7,40 +7,48 @@ import PipelineView from "@/components/pipeline-view";
 import ContactDetailsSidebar from "@/components/contact-details-sidebar";
 import AddContactModal from "@/components/add-contact-modal";
 import ImportHelpModal from "@/components/import-help-modal";
-import TableSettingsModal, { type TableSettings } from "@/components/table-settings-modal";
-import AdvancedFilters, { type FilterCriteria } from "@/components/advanced-filters";
+import ImportLoadingModal from "@/components/import-loading-modal";
+import TableSettingsModal, {
+  type TableSettings,
+} from "@/components/table-settings-modal";
+import AdvancedFilters, {
+  type FilterCriteria,
+} from "@/components/advanced-filters";
 import AIInsightsPanel from "@/components/ai-insights-panel";
 import DynamicColumnBuilder from "@/components/dynamic-column-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
+import {
+  Search,
+  Filter,
+  Download,
+  Upload,
   Plus,
   Columns,
   Users,
   TrendingUp,
   HelpCircle,
-  Settings
+  Settings,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
+import { CSVImporter } from "@importcsv/react";
 
 export default function Dashboard() {
-  const [currentView, setCurrentView] = useState<'grid' | 'pipeline'>('grid');
-  const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<"grid" | "pipeline">("grid");
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(
+    null,
+  );
   const [showAddContact, setShowAddContact] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showImportHelp, setShowImportHelp] = useState(false);
   const [showTableSettings, setShowTableSettings] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showColumnBuilder, setShowColumnBuilder] = useState(false);
+  const [importingCount, setImportingCount] = useState<number>(0);
   const [columnFilters, setColumnFilters] = useState<Record<string, any>>({});
   const [filters, setFilters] = useState<FilterCriteria>({
-    search: '',
+    search: "",
     statuses: [],
     dealValueMin: null,
     dealValueMax: null,
@@ -51,36 +59,42 @@ export default function Dashboard() {
     hasNotes: null,
   });
   const [tableSettings, setTableSettings] = useState<TableSettings>(() => {
-    const saved = localStorage.getItem('crm-table-settings');
-    return saved ? JSON.parse(saved) : {
-      columns: [
-        { key: 'name', label: 'Name & Company', visible: true },
-        { key: 'status', label: 'Status', visible: true },
-        { key: 'email', label: 'Email', visible: true },
-        { key: 'phone', label: 'Phone', visible: true },
-        { key: 'dealValue', label: 'Deal Value', visible: true },
-        { key: 'tags', label: 'Tags', visible: true },
-        { key: 'createdAt', label: 'Created Date', visible: false },
-        { key: 'updatedAt', label: 'Updated Date', visible: false },
-      ],
-      pageSize: 50,
-      autoSave: true,
-    };
+    const saved = localStorage.getItem("crm-table-settings");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          columns: [
+            { key: "name", label: "Name & Company", visible: true },
+            { key: "status", label: "Status", visible: true },
+            { key: "email", label: "Email", visible: true },
+            { key: "phone", label: "Phone", visible: true },
+            { key: "dealValue", label: "Deal Value", visible: true },
+            { key: "tags", label: "Tags", visible: true },
+            { key: "createdAt", label: "Created Date", visible: false },
+            { key: "updatedAt", label: "Updated Date", visible: false },
+          ],
+          pageSize: 50,
+          autoSave: true,
+        };
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
-    queryKey: ['/api/contacts'],
+    queryKey: ["/api/contacts"],
   });
 
   const { data: stats = {} } = useQuery<any>({
-    queryKey: ['/api/pipeline/stats'],
+    queryKey: ["/api/pipeline/stats"],
   });
 
   const handleColumnFilterChange = (column: string, value: any) => {
-    setColumnFilters(prev => {
-      if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
+    setColumnFilters((prev) => {
+      if (
+        value === null ||
+        value === undefined ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
         const { [column]: _, ...rest } = prev;
         return rest;
       }
@@ -91,34 +105,42 @@ export default function Dashboard() {
   const filteredContacts = contacts.filter((contact) => {
     // Column-specific filters
     for (const [column, filterValues] of Object.entries(columnFilters)) {
-      if (!filterValues || (Array.isArray(filterValues) && filterValues.length === 0)) continue;
-      
+      if (
+        !filterValues ||
+        (Array.isArray(filterValues) && filterValues.length === 0)
+      )
+        continue;
+
       const contactValue = contact[column as keyof Contact];
-      
+
       // Handle different column types
-      if (column === 'tags') {
-        const contactTags = contactValue as string[] || [];
-        const hasMatchingTag = filterValues.some((filterTag: string) => 
-          contactTags.includes(filterTag)
+      if (column === "tags") {
+        const contactTags = (contactValue as string[]) || [];
+        const hasMatchingTag = filterValues.some((filterTag: string) =>
+          contactTags.includes(filterTag),
         );
         if (!hasMatchingTag) return false;
-      } else if (column === 'dealValue') {
+      } else if (column === "dealValue") {
         const numValue = Number(contactValue) || 0;
         const hasMatchingRange = filterValues.some((range: string) => {
-          if (range === '$0') return numValue === 0;
-          if (range === '< $1k') return numValue > 0 && numValue < 1000;
-          if (range === '$1k - $5k') return numValue >= 1000 && numValue < 5000;
-          if (range === '$5k - $10k') return numValue >= 5000 && numValue < 10000;
-          if (range === '$10k - $50k') return numValue >= 10000 && numValue < 50000;
-          if (range === '$50k+') return numValue >= 50000;
+          if (range === "$0") return numValue === 0;
+          if (range === "< $1k") return numValue > 0 && numValue < 1000;
+          if (range === "$1k - $5k") return numValue >= 1000 && numValue < 5000;
+          if (range === "$5k - $10k")
+            return numValue >= 5000 && numValue < 10000;
+          if (range === "$10k - $50k")
+            return numValue >= 10000 && numValue < 50000;
+          if (range === "$50k+") return numValue >= 50000;
           return false;
         });
         if (!hasMatchingRange) return false;
-      } else if (column === 'phone' || column === 'email') {
+      } else if (column === "phone" || column === "email") {
         const hasValue = !!contactValue;
         const matchesFilter = filterValues.some((filterValue: string) => {
-          if (filterValue === `Has ${column === 'phone' ? 'Phone' : 'Email'}`) return hasValue;
-          if (filterValue === `No ${column === 'phone' ? 'Phone' : 'Email'}`) return !hasValue;
+          if (filterValue === `Has ${column === "phone" ? "Phone" : "Email"}`)
+            return hasValue;
+          if (filterValue === `No ${column === "phone" ? "Phone" : "Email"}`)
+            return !hasValue;
           return false;
         });
         if (!matchesFilter) return false;
@@ -131,18 +153,20 @@ export default function Dashboard() {
     // Basic search
     if (filters.search) {
       const query = filters.search.toLowerCase();
-      const matchesSearch = (
+      const matchesSearch =
         contact.name.toLowerCase().includes(query) ||
         contact.email.toLowerCase().includes(query) ||
         contact.company?.toLowerCase().includes(query) ||
         contact.status.toLowerCase().includes(query) ||
-        contact.tags?.some(tag => tag.toLowerCase().includes(query))
-      );
+        contact.tags?.some((tag) => tag.toLowerCase().includes(query));
       if (!matchesSearch) return false;
     }
 
     // Status filter (from advanced filters)
-    if (filters.statuses.length > 0 && !filters.statuses.includes(contact.status)) {
+    if (
+      filters.statuses.length > 0 &&
+      !filters.statuses.includes(contact.status)
+    ) {
       return false;
     }
 
@@ -167,8 +191,8 @@ export default function Dashboard() {
 
     // Tags filter (from advanced filters)
     if (filters.tags.length > 0) {
-      const hasMatchingTag = filters.tags.some(tag => 
-        contact.tags?.includes(tag)
+      const hasMatchingTag = filters.tags.some((tag) =>
+        contact.tags?.includes(tag),
       );
       if (!hasMatchingTag) return false;
     }
@@ -186,33 +210,33 @@ export default function Dashboard() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/contacts/export', {
-        credentials: 'include',
+      const response = await fetch("/api/contacts/export", {
+        credentials: "include",
         headers: {
-          'Accept': 'text/csv',
+          Accept: "text/csv",
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Export failed: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'contacts.csv';
+      a.download = "contacts.csv";
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast({
         title: "Export completed",
         description: "Contacts have been exported successfully.",
       });
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error("Export failed:", error);
       toast({
         title: "Export failed",
         description: "Failed to export contacts. Please try again.",
@@ -222,62 +246,66 @@ export default function Dashboard() {
   };
 
   const { mutate: importContacts, isPending: isImporting } = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await fetch('/api/contacts/import', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
+    mutationFn: async (data: any[]) => {
+      const response = await fetch("/api/contacts/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Import failed' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Import failed" }));
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`,
+        );
       }
       return response.json();
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/stats"] });
       toast({
         title: "Import completed",
-        description: result.message || `Successfully imported ${result.created} contacts`,
+        description:
+          result.message || `Successfully imported ${result.created} contacts`,
       });
       if (result.errors && result.errors.length > 0) {
-        console.warn('Import warnings:', result.errors);
+        console.warn("Import warnings:", result.errors);
       }
     },
     onError: (error: any) => {
       toast({
         title: "Import failed",
-        description: error.message || "Failed to import contacts. Please check your CSV file format.",
+        description:
+          error.message ||
+          "Failed to import contacts. Please check your CSV file format.",
         variant: "destructive",
       });
     },
   });
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith('.csv')) {
+  const handleImport = (data: any[]) => {
+    if (!data || data.length === 0) {
       toast({
-        title: "Invalid file type",
-        description: "Please select a CSV file.",
+        title: "No data to import",
+        description: "Please provide valid Contact data.",
         variant: "destructive",
       });
       return;
     }
 
-    importContacts(file);
-    // Reset the input
-    event.target.value = '';
+    setImportingCount(data.length);
+    importContacts(data);
   };
 
   const handleTableSettingsSave = (newSettings: TableSettings) => {
     setTableSettings(newSettings);
     if (newSettings.autoSave) {
-      localStorage.setItem('crm-table-settings', JSON.stringify(newSettings));
+      localStorage.setItem("crm-table-settings", JSON.stringify(newSettings));
     }
     toast({
       title: "Settings saved",
@@ -288,7 +316,7 @@ export default function Dashboard() {
   const handleColumnSave = (column: any) => {
     // In a real app, this would save the column configuration to the database
     const newColumn = {
-      key: column.name.toLowerCase().replace(/\s+/g, '_'),
+      key: column.name.toLowerCase().replace(/\s+/g, "_"),
       label: column.name,
       visible: true,
       type: column.type,
@@ -303,7 +331,10 @@ export default function Dashboard() {
 
     setTableSettings(updatedSettings);
     if (updatedSettings.autoSave) {
-      localStorage.setItem('crm-table-settings', JSON.stringify(updatedSettings));
+      localStorage.setItem(
+        "crm-table-settings",
+        JSON.stringify(updatedSettings),
+      );
     }
 
     toast({
@@ -326,7 +357,7 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar currentView={currentView} onViewChange={setCurrentView} />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200">
@@ -334,25 +365,31 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {currentView === 'grid' ? 'Grid View' : 'Pipeline View'}
+                  {currentView === "grid" ? "Grid View" : "Pipeline View"}
                 </h2>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="bg-requisor-light text-requisor-turquoise">
+                  <Badge
+                    variant="secondary"
+                    className="bg-requisor-light text-requisor-turquoise"
+                  >
                     <div className="w-1.5 h-1.5 mr-1.5 bg-requisor-turquoise rounded-full"></div>
                     <Users className="h-3 w-3 mr-1" />
                     {stats?.totalContacts || 0} Contacts
                   </Badge>
-                  <Badge variant="secondary" className="bg-requisor-light text-requisor-turquoise">
+                  <Badge
+                    variant="secondary"
+                    className="bg-requisor-light text-requisor-turquoise"
+                  >
                     <div className="w-1.5 h-1.5 mr-1.5 bg-requisor-turquoise rounded-full"></div>
                     <TrendingUp className="h-3 w-3 mr-1" />
                     {stats?.activeDeals || 0} Active Deals
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-3">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   size="sm"
                   onClick={() => setShowColumnBuilder(true)}
                   className="border-requisor-turquoise/20 text-requisor-turquoise hover:bg-requisor-light"
@@ -368,7 +405,12 @@ export default function Dashboard() {
                     placeholder="Search contacts, deals..."
                     className="pl-10 w-64"
                     value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        search: e.target.value,
+                      }))
+                    }
                   />
                 </div>
 
@@ -376,8 +418,12 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2">
                   {Object.keys(columnFilters).length > 0 && (
                     <>
-                      <Badge variant="secondary" className="bg-requisor-turquoise/10 text-requisor-turquoise">
-                        {Object.keys(columnFilters).length} column filter{Object.keys(columnFilters).length > 1 ? 's' : ''}
+                      <Badge
+                        variant="secondary"
+                        className="bg-requisor-turquoise/10 text-requisor-turquoise"
+                      >
+                        {Object.keys(columnFilters).length} column filter
+                        {Object.keys(columnFilters).length > 1 ? "s" : ""}
                       </Badge>
                       <Button
                         onClick={() => setColumnFilters({})}
@@ -389,27 +435,43 @@ export default function Dashboard() {
                       </Button>
                     </>
                   )}
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setShowAdvancedFilters(true)}
                   >
                     <Filter className="h-4 w-4 mr-2" />
                     Filters
-                    {(filters.statuses.length > 0 || filters.tags.length > 0 || filters.companies.length > 0 || 
-                      filters.dealValueMin || filters.dealValueMax || filters.dateRange.from || filters.dateRange.to ||
-                      filters.hasPhone || filters.hasNotes) && (
-                      <Badge variant="secondary" className="ml-2 h-4 w-4 p-0 text-xs">
-                        {[filters.statuses.length, filters.tags.length, filters.companies.length, 
-                          filters.dealValueMin ? 1 : 0, filters.dealValueMax ? 1 : 0,
-                          filters.dateRange.from ? 1 : 0, filters.dateRange.to ? 1 : 0,
-                          filters.hasPhone ? 1 : 0, filters.hasNotes ? 1 : 0].reduce((a, b) => a + b, 0)}
+                    {(filters.statuses.length > 0 ||
+                      filters.tags.length > 0 ||
+                      filters.companies.length > 0 ||
+                      filters.dealValueMin ||
+                      filters.dealValueMax ||
+                      filters.dateRange.from ||
+                      filters.dateRange.to ||
+                      filters.hasPhone ||
+                      filters.hasNotes) && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 h-4 w-4 p-0 text-xs"
+                      >
+                        {[
+                          filters.statuses.length,
+                          filters.tags.length,
+                          filters.companies.length,
+                          filters.dealValueMin ? 1 : 0,
+                          filters.dealValueMax ? 1 : 0,
+                          filters.dateRange.from ? 1 : 0,
+                          filters.dateRange.to ? 1 : 0,
+                          filters.hasPhone ? 1 : 0,
+                          filters.hasNotes ? 1 : 0,
+                        ].reduce((a, b) => a + b, 0)}
                       </Badge>
                     )}
                   </Button>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowTableSettings(true)}
                 >
@@ -424,21 +486,17 @@ export default function Dashboard() {
                     Export CSV
                   </Button>
                   <div className="flex items-center space-x-1">
-                    <Button variant="outline" size="sm" asChild disabled={isImporting}>
-                      <label className="cursor-pointer">
-                        <Upload className="h-4 w-4 mr-2" />
-                        {isImporting ? 'Importing...' : 'Import CSV'}
-                        <input
-                          type="file"
-                          accept=".csv"
-                          className="hidden"
-                          onChange={handleImport}
-                          disabled={isImporting}
-                        />
-                      </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isImporting}
+                      onClick={() => setShowImportModal(true)}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import CSV
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => setShowImportHelp(true)}
                       className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
@@ -450,7 +508,10 @@ export default function Dashboard() {
                 </div>
 
                 {/* Add Contact */}
-                <Button onClick={() => setShowAddContact(true)} className="bg-requisor-turquoise hover:bg-requisor-turquoise/90">
+                <Button
+                  onClick={() => setShowAddContact(true)}
+                  className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
@@ -462,16 +523,16 @@ export default function Dashboard() {
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-auto bg-gray-50">
-            {currentView === 'grid' ? (
-              <GridView 
-                contacts={filteredContacts as Contact[]} 
+            {currentView === "grid" ? (
+              <GridView
+                contacts={filteredContacts as Contact[]}
                 onContactSelect={setSelectedContactId}
                 tableSettings={tableSettings}
                 columnFilters={columnFilters}
                 onColumnFilterChange={handleColumnFilterChange}
               />
             ) : (
-              <PipelineView 
+              <PipelineView
                 contacts={filteredContacts as Contact[]}
                 onContactSelect={setSelectedContactId}
               />
@@ -480,7 +541,7 @@ export default function Dashboard() {
 
           {/* AI Insights Sidebar */}
           <div className="w-80 border-l border-gray-200 bg-white overflow-auto">
-            <AIInsightsPanel 
+            <AIInsightsPanel
               contactId={selectedContactId || undefined}
               className="h-full"
             />
@@ -493,6 +554,64 @@ export default function Dashboard() {
         contactId={selectedContactId}
         isOpen={!!selectedContactId}
         onClose={() => setSelectedContactId(null)}
+      />
+
+      {/* We're using the deprecated `columns` property due to a package dependency issue.
+          Once resolved, switch to `schema` instead.
+          https://github.com/importcsv/importcsv/issues/13 */}
+      <CSVImporter
+        modalIsOpen={showImportModal}
+        modalOnCloseTriggered={() => setShowImportModal(false)}
+        columns={[
+          {
+            id: "name",
+            label: "Full Name",
+            type: "string",
+            validators: [{ type: "required" }],
+          },
+          {
+            id: "email",
+            label: "Email",
+            type: "email",
+            validators: [{ type: "required" }],
+          },
+          {
+            id: "phone",
+            label: "Phone",
+            type: "phone",
+            transformations: [{ type: "normalize_phone" }],
+          },
+          {
+            id: "company",
+            label: "Company",
+            type: "string",
+          },
+          {
+            id: "status",
+            label: "Status",
+            type: "string",
+            options: [
+              "lead",
+              "qualified",
+              "proposal",
+              "closed-won",
+              "closed-lost",
+            ],
+            transformations: [
+              {
+                type: "default",
+                value: "lead",
+              },
+            ],
+          },
+        ]}
+        onComplete={(data) => {
+          const contacts = data.mappedData.map((row: any) => row.data);
+
+          handleImport(contacts);
+
+          setShowImportModal(false);
+        }}
       />
 
       {showAddContact && (
@@ -535,6 +654,8 @@ export default function Dashboard() {
           onSave={handleColumnSave}
         />
       )}
+
+      <ImportLoadingModal isOpen={isImporting} contactCount={importingCount} />
     </div>
   );
 }
