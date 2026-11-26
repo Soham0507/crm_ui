@@ -1,0 +1,22 @@
+# Postgres for local development only. Started by `npm run local`.
+name: requisor-crm-local
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?start the app with "npm run local"}
+      POSTGRES_DB: crm
+    ports:
+      # Loopback only, on 5433 to stay clear of any Postgres already on 5432.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U crm -d crm"]
+      interval: 2s
+      retries: 30
+
+volumes:
+  pgdata:

@@ -8,7 +8,12 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
+// Local development only (`npm run local`): a fixed test user replaces Replit sign-in.
+export const isLocalAuth =
+  process.env.NODE_ENV === "development" &&
+  process.env.LOCAL_DEV_AUTH === "true";
+
+if (!isLocalAuth && !process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
 }
 
@@ -38,7 +43,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: !isLocalAuth, // local development is plain http
       maxAge: sessionTtl,
     },
   });
@@ -66,11 +71,44 @@ async function upsertUser(
   });
 }
 
+function setupLocalAuth(app: Express) {
+  const claims = {
+    sub: "local-dev-user",
+    email: "developer@example.test",
+    first_name: "Local",
+    last_name: "Developer",
+  };
+
+  app.get("/api/login", async (req, res, next) => {
+    if (!["localhost", "127.0.0.1"].includes(req.hostname)) {
+      return res.status(403).json({ message: "Local sign-in only" });
+    }
+    try {
+      await upsertUser(claims);
+      const user = { claims, expires_at: Number.MAX_SAFE_INTEGER };
+      req.login(user, (error) => (error ? next(error) : res.redirect("/")));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/logout", (req, res) => {
+    req.logout(() => res.redirect("/"));
+  });
+}
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  if (isLocalAuth) {
+    setupLocalAuth(app);
+    return;
+  }
 
   const config = await getOidcConfig();
 
@@ -115,9 +153,6 @@ export async function setupAuth(app: Express) {
       passport.use(localStrategy);
     }
   }
-
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {

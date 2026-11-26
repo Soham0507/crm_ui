@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { isLocalAuth } from "./replitAuth";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -62,8 +63,9 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
+    // The local test sign-in must not be reachable from other machines.
+    host: isLocalAuth ? "127.0.0.1" : "0.0.0.0",
+    reusePort: process.platform !== "win32", // unsupported on Windows
   }, () => {
     log(`serving on port ${port}`);
   });
