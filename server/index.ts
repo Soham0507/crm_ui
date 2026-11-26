@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { isLocalAuth } from "./replitAuth";
@@ -65,7 +66,7 @@ app.use((req, res, next) => {
     port,
     // The local test sign-in must not be reachable from other machines.
     host: isLocalAuth ? "127.0.0.1" : "0.0.0.0",
-    reusePort: process.platform !== "win32", // unsupported on Windows
+    ...(process.platform === "win32" ? {} : { reusePort: true }),
   }, () => {
     log(`serving on port ${port}`);
   });

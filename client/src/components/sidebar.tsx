@@ -13,7 +13,7 @@ import {
   Database,
   Sparkles
 } from "lucide-react";
-import requisorLogo from "@assets/requisor-mascot.png";
+import requisorLogo from "@assets/requisor-dino.png";
 
 // Shared look of the navigation entries.
 const navItem = "w-full justify-start";
