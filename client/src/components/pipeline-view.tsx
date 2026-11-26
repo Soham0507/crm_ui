@@ -7,6 +7,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Contact } from "@shared/schema";
 
+// Stage colours, matching the pipeline board on the landing page.
+const stageStyles: Record<string, { accent: string; badge: string }> = {
+  lead: { accent: "#94A3B8", badge: "bg-slate-100 text-slate-700" },
+  qualified: { accent: "#3B82F6", badge: "bg-blue-100 text-blue-800" },
+  proposal: { accent: "#F59E0B", badge: "bg-amber-100 text-amber-800" },
+  closed: { accent: "#10B981", badge: "bg-emerald-100 text-emerald-800" },
+};
+
 interface PipelineViewProps {
   contacts: Contact[];
   onContactSelect: (id: number) => void;
@@ -120,18 +128,18 @@ export default function PipelineView({ contacts, onContactSelect }: PipelineView
   };
 
   return (
-    <div className="h-full px-6 py-6">
+    <div className="flex h-full flex-col px-4 pt-4 pb-6">
       {/* Pipeline Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Sales Pipeline</h3>
+            <h3 className="text-lg font-extrabold tracking-tight text-ink">Sales Pipeline</h3>
             <p className="text-sm text-gray-600">Track deals through your sales process</p>
           </div>
           <div className="flex items-center space-x-3">
-            <div className="text-sm text-gray-600">
-              Total Pipeline Value: 
-              <span className="font-semibold text-gray-900 ml-1">
+            <div className="rounded-full bg-white px-4 py-2 text-sm text-ink-body shadow-press">
+              Total Pipeline Value:
+              <span className="font-extrabold text-brand ml-1">
                 {formatCurrency(stats?.totalValue || 0)}
               </span>
             </div>
@@ -140,27 +148,28 @@ export default function PipelineView({ contacts, onContactSelect }: PipelineView
       </div>
 
       {/* Pipeline Columns */}
-      <div className="grid grid-cols-4 gap-6 h-full">
+      <div className="grid min-h-0 flex-1 grid-cols-4 gap-4">
         {columns.map((column) => (
           <div
             key={column.id}
-            className="bg-gray-50 rounded-lg border border-gray-200 flex flex-col"
+            className="flex min-w-0 flex-col rounded-[20px] bg-[#EAEFF5] p-2"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, column.status)}
           >
             {/* Column Header */}
-            <div className="px-4 py-3 border-b border-gray-200 bg-white rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900">{column.title}</h4>
+            <div className="rounded-2xl bg-white px-3 py-3 shadow-press">
+              <div className="flex flex-col items-start gap-2">
+                <h4 className="flex items-center gap-2 font-bold text-ink">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: stageStyles[column.id].accent }}
+                  />
+                  {column.title}
+                </h4>
                 <div className="flex items-center space-x-2">
                   <Badge 
                     variant="secondary" 
-                    className={
-                      column.id === 'lead' ? 'bg-blue-100 text-blue-800' :
-                      column.id === 'qualified' ? 'bg-green-100 text-green-800' :
-                      column.id === 'proposal' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }
+                    className={stageStyles[column.id].badge}
                   >
                     {column.count}
                   </Badge>
@@ -172,7 +181,7 @@ export default function PipelineView({ contacts, onContactSelect }: PipelineView
             </div>
 
             {/* Column Content */}
-            <div className="flex-1 p-4 space-y-3 overflow-auto custom-scrollbar">
+            <div className="flex-1 space-y-3 overflow-auto px-1 pt-3 pb-2 custom-scrollbar">
               {column.contacts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 text-sm">
                   No deals in this stage
@@ -181,12 +190,13 @@ export default function PipelineView({ contacts, onContactSelect }: PipelineView
                 column.contacts.map((contact) => (
                   <Card
                     key={contact.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow bg-white"
+                    className="cursor-pointer rounded-xl border-0 border-l-4 bg-white shadow-press transition-transform hover:-translate-y-0.5"
+                    style={{ borderLeftColor: stageStyles[column.id].accent }}
                     draggable
                     onDragStart={(e) => handleDragStart(e, contact)}
                     onClick={() => onContactSelect(contact.id)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <h5 className="text-sm font-medium text-gray-900 truncate">

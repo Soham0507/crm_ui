@@ -13,15 +13,33 @@ import {
   Database,
   Sparkles
 } from "lucide-react";
-import requisorLogo from "@assets/Requisor Logo_1753816063994.png";
+import requisorLogo from "@assets/requisor-mascot.png";
 
+// Shared look of the navigation entries.
+const navItem = "w-full justify-start";
+const navActive =
+  "bg-brand text-white shadow-press-brand-down hover:bg-brand hover:text-white";
+const navIdle = "text-ink-body hover:bg-brand-soft hover:text-brand";
+
+// Only the dashboard passes these. Other pages leave them out.
 interface SidebarProps {
-  currentView: 'grid' | 'pipeline';
-  onViewChange: (view: 'grid' | 'pipeline') => void;
+  currentView?: 'grid' | 'pipeline';
+  onViewChange?: (view: 'grid' | 'pipeline') => void;
 }
 
 export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
+
+  const path = window.location.pathname;
+
+  // Switch views in place on the dashboard; from other pages, go to the dashboard.
+  const showView = (view: 'grid' | 'pipeline') => {
+    if (onViewChange) {
+      onViewChange(view);
+    } else {
+      window.location.href = view === 'pipeline' ? '/?view=pipeline' : '/';
+    }
+  };
 
   const getInitials = (user: any) => {
     if (user?.firstName && user?.lastName) {
@@ -34,36 +52,31 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r border-gray-200 flex flex-col">
+    <div className="sticky top-4 m-4 mr-0 flex h-[calc(100vh-2rem)] w-60 shrink-0 flex-col self-start overflow-y-auto rounded-[24px] bg-white shadow-depth-sm">
       {/* Logo & Brand */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-5 py-4 border-b border-line">
         <div className="flex items-center">
           <img 
             src={requisorLogo} 
             alt="Requisor" 
-            className="w-8 h-8 object-contain"
+            className="h-10 w-10 rounded-full shadow-[0_6px_14px_-4px_rgba(15,118,110,0.45)]"
           />
-          <h1 className="ml-3 text-xl font-bold requisor-turquoise">Requisor CRM</h1>
+          <h1 className="ml-2.5 text-[17px] font-extrabold tracking-tight text-ink">Requisor CRM</h1>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-2">
+      <nav className="flex-1 px-3 py-4 space-y-2">
         <div className="mb-6">
-          <h2 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <h2 className="px-3 text-[11px] font-bold text-ink-muted uppercase tracking-wider">
             Views
           </h2>
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 space-y-1.5">
             <Button
               variant="ghost"
               size="sm"
-              className={cn(
-                "w-full justify-start",
-                currentView === 'grid' 
-                  ? "requisor-turquoise bg-requisor-light hover:bg-requisor-light" 
-                  : "text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
-              )}
-              onClick={() => onViewChange('grid')}
+              className={cn(navItem, currentView === 'grid' ? navActive : navIdle)}
+              onClick={() => showView('grid')}
             >
               <LayoutGrid className="mr-3 h-5 w-5" />
               Grid View
@@ -71,13 +84,8 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={cn(
-                "w-full justify-start",
-                currentView === 'pipeline' 
-                  ? "requisor-turquoise bg-requisor-light hover:bg-requisor-light" 
-                  : "text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
-              )}
-              onClick={() => onViewChange('pipeline')}
+              className={cn(navItem, currentView === 'pipeline' ? navActive : navIdle)}
+              onClick={() => showView('pipeline')}
             >
               <GitBranch className="mr-3 h-5 w-5" />
               Pipeline
@@ -86,14 +94,14 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
         </div>
 
         <div className="mb-6">
-          <h2 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <h2 className="px-3 text-[11px] font-bold text-ink-muted uppercase tracking-wider">
             Management
           </h2>
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 space-y-1.5">
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className={cn(navItem, navIdle)}
             >
               <Users className="mr-3 h-5 w-5" />
               Contacts
@@ -101,7 +109,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className={cn(navItem, path === '/custom-tables' ? navActive : navIdle)}
               onClick={() => window.location.href = '/custom-tables'}
             >
               <Database className="mr-3 h-5 w-5" />
@@ -110,7 +118,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-gray-700 hover:text-requisor-turquoise hover:bg-gray-50"
+              className={cn(navItem, path === '/outreach' ? navActive : navIdle)}
               onClick={() => window.location.href = '/outreach'}
             >
               <Sparkles className="mr-3 h-5 w-5" />
@@ -119,7 +127,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className={cn(navItem, navIdle)}
             >
               <FileText className="mr-3 h-5 w-5" />
               Tasks
@@ -127,7 +135,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className={cn(navItem, navIdle)}
             >
               <BarChart3 className="mr-3 h-5 w-5" />
               Reports
@@ -137,23 +145,23 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
       </nav>
 
       {/* User Profile */}
-      <div className="px-4 py-4 border-t border-gray-200">
+      <div className="px-4 py-4 border-t border-line">
         <div className="flex items-center justify-between">
           <div className="flex items-center min-w-0 flex-1">
             <Avatar className="h-8 w-8">
               <AvatarImage src={user?.profileImageUrl} />
-              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+              <AvatarFallback className="bg-brand-soft text-brand text-xs font-bold">
                 {getInitials(user)}
               </AvatarFallback>
             </Avatar>
             <div className="ml-3 min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-700 truncate">
+              <p className="text-sm font-bold text-ink truncate">
                 {user?.firstName && user?.lastName 
                   ? `${user.firstName} ${user.lastName}`
                   : user?.email?.split('@')[0] || 'User'
                 }
               </p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              <p className="text-xs text-ink-muted truncate">{user?.email}</p>
             </div>
           </div>
           <Button

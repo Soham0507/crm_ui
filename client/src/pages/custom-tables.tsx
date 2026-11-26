@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import Sidebar from "@/components/sidebar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,16 @@ import CustomTableView from "@/components/custom-table-view";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
-import type { CustomTable, CustomTableWithRecords, CustomTableSchema } from "@shared/schema";
+import type { CustomTable, CustomTableSummary, CustomTableWithRecords, CustomTableSchema } from "@shared/schema";
+
+function PageLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="min-w-0 flex-1 px-6 py-6">{children}</div>
+    </div>
+  );
+}
 
 export default function CustomTables() {
   const [showBuilder, setShowBuilder] = useState(false);
@@ -25,7 +35,7 @@ export default function CustomTables() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: tables = [], isLoading } = useQuery({
+  const { data: tables = [], isLoading } = useQuery<CustomTableSummary[]>({
     queryKey: ['/api/custom-tables'],
   });
 
@@ -73,9 +83,10 @@ export default function CustomTables() {
       displayName, 
       schema 
     }),
-    onSuccess: () => {
+    // Take the id from the request: the form has already cleared editingTable.
+    onSuccess: (_response, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/custom-tables'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${editingTable?.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${id}`] });
       setShowBuilder(false);
       setEditingTable(null);
       toast({
@@ -142,10 +153,36 @@ export default function CustomTables() {
     return schema.columns?.length || 0;
   };
 
+  // Memoised because the form reloads whenever this object changes.
+  const editingData = useMemo(
+    () =>
+      editingTable
+        ? {
+            tableName: editingTable.tableName,
+            displayName: editingTable.displayName,
+            schema: editingTable.schema as CustomTableSchema,
+          }
+        : undefined,
+    [editingTable],
+  );
+
+  // Rendered by both the table list and the open table.
+  const tableBuilder = (
+    <CustomTableBuilder
+      isOpen={showBuilder}
+      onClose={() => {
+        setShowBuilder(false);
+        setEditingTable(null);
+      }}
+      onSave={handleSaveTable}
+      initialData={editingData}
+    />
+  );
+
   // If a table is selected, show the table view
   if (selectedTable && selectedTableData) {
     return (
-      <div className="h-full px-6 py-6">
+      <PageLayout>
         <div className="mb-6">
           <Button
             variant="ghost"
@@ -156,21 +193,22 @@ export default function CustomTables() {
             Back to Tables
           </Button>
         </div>
-        
+
         <CustomTableView
           table={selectedTableData}
           onEdit={() => handleEditTable(selectedTableData)}
         />
-      </div>
+        {tableBuilder}
+      </PageLayout>
     );
   }
 
   return (
-    <div className="h-full px-6 py-6">
+    <PageLayout>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Custom Tables</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink">Custom Tables</h1>
           <p className="text-gray-600 mt-2">
             Create and manage custom data tables for your CRM
           </p>
@@ -198,9 +236,11 @@ export default function CustomTables() {
           ))}
         </div>
       ) : tables.length === 0 ? (
-        <div className="text-center py-12">
-          <Database className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No Custom Tables</h3>
+        <div className="rounded-[24px] bg-white px-6 py-14 text-center shadow-depth">
+          <span className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#2DD4BF,#0F766E)] shadow-[0_6px_0_#0B4F4A,inset_0_2px_0_rgba(255,255,255,0.35)]">
+            <Database className="h-8 w-8 text-white" />
+          </span>
+          <h3 className="text-xl font-extrabold text-ink mb-2">No Custom Tables</h3>
           <p className="text-gray-600 mb-6">
             Create your first custom table to organize your data
           </p>
@@ -211,17 +251,16 @@ export default function CustomTables() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tables.map((table: CustomTable) => {
+          {tables.map((table) => {
             const schema = table.schema as any;
-            const recordCount = 0; // We'd need to fetch this separately or include in the response
-            
+
             return (
-              <Card key={table.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card key={table.id} className="cursor-pointer shadow-depth transition-transform duration-300 hover:-translate-y-1">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="flex items-center">
-                        <TableIcon className="h-5 w-5 mr-2 text-blue-600" />
+                        <TableIcon className="h-5 w-5 mr-2 text-brand" />
                         {table.displayName}
                       </CardTitle>
                       <CardDescription className="mt-1">
@@ -272,8 +311,10 @@ export default function CustomTables() {
                     </div>
                     
                     <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>0 records</span>
-                      <span className="text-blue-600 hover:text-blue-700">
+                      <span>
+                        {table.recordCount} record{table.recordCount !== 1 ? 's' : ''}
+                      </span>
+                      <span className="font-semibold text-brand">
                         View table →
                       </span>
                     </div>
@@ -285,20 +326,7 @@ export default function CustomTables() {
         </div>
       )}
 
-      {/* Table Builder Modal */}
-      <CustomTableBuilder
-        isOpen={showBuilder}
-        onClose={() => {
-          setShowBuilder(false);
-          setEditingTable(null);
-        }}
-        onSave={handleSaveTable}
-        initialData={editingTable ? {
-          tableName: editingTable.tableName,
-          displayName: editingTable.displayName,
-          schema: editingTable.schema as CustomTableSchema,
-        } : undefined}
-      />
-    </div>
+      {tableBuilder}
+    </PageLayout>
   );
 }

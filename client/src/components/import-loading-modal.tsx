@@ -27,7 +27,7 @@ export default function ImportLoadingModal({
 
         <div className="space-y-6 py-6">
           <div className="flex flex-col items-center justify-center">
-            <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
+            <Loader2 className="h-12 w-12 text-brand animate-spin mb-4" />
             <p className="text-gray-700 text-center font-medium">
               Creating your contacts...
             </p>
@@ -38,8 +38,8 @@ export default function ImportLoadingModal({
             )}
           </div>
 
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-sm text-blue-800 text-center">
+          <div className="bg-brand-soft rounded-xl p-4">
+            <p className="text-sm text-brand-deep text-center">
               This may take a few moments. Please don't close this window.
             </p>
           </div>

@@ -88,7 +88,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
       <Card className={cn("", className)}>
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-purple-600" />
+            <Brain className="h-5 w-5 text-brand" />
             <CardTitle className="text-lg">AI Insights</CardTitle>
           </div>
         </CardHeader>
@@ -111,7 +111,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
       <Card className={cn("", className)}>
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-purple-600" />
+            <Brain className="h-5 w-5 text-brand" />
             <CardTitle className="text-lg">AI Insights</CardTitle>
           </div>
         </CardHeader>
@@ -143,7 +143,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-purple-600" />
+            <Brain className="h-5 w-5 text-brand" />
             <CardTitle className="text-lg">
               AI Insights {contactId ? "- Contact" : "- Pipeline"}
             </CardTitle>
@@ -199,7 +199,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
                 <ul className="space-y-2">
                   {insights.nextActions.map((action, index) => (
                     <li key={index} className="flex items-start">
-                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div className="w-1.5 h-1.5 bg-brand rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <span className="text-sm">{action}</span>
                     </li>
                   ))}
@@ -212,7 +212,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <span className="text-sm font-medium flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-blue-600" />
+                    <Clock className="h-4 w-4 mr-2 text-brand" />
                     Best Contact Time
                   </span>
                   <p className="text-sm text-gray-600 mt-1">{insights.bestContactTime}</p>
@@ -252,7 +252,7 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
                             </div>
                             <p className="text-sm text-gray-600">{insight.description}</p>
                             <div className="flex items-center space-x-2 text-xs">
-                              <span className="font-medium text-purple-600">Action:</span>
+                              <span className="font-medium text-brand">Action:</span>
                               <span className="text-gray-600">{insight.actionable}</span>
                             </div>
                             <div className="flex items-center justify-between">
@@ -316,14 +316,14 @@ export default function AIInsightsPanel({ contactId, className }: AIInsightsPane
 
                 {/* Recommendations */}
                 <div>
-                  <h4 className="font-medium mb-2 flex items-center text-purple-700">
+                  <h4 className="font-medium mb-2 flex items-center text-brand">
                     <Lightbulb className="h-4 w-4 mr-2" />
                     Recommendations
                   </h4>
                   <ul className="space-y-1">
                     {pipeline.recommendations.map((recommendation, index) => (
                       <li key={index} className="flex items-start">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div className="w-1.5 h-1.5 bg-brand rounded-full mt-2 mr-3 flex-shrink-0"></div>
                         <span className="text-sm">{recommendation}</span>
                       </li>
                     ))}

@@ -162,7 +162,7 @@ export default function ContactDetailsSidebar({ contactId, isOpen, onClose }: Co
   if (!isOpen || !contactId) return null;
 
   return (
-    <div className={`fixed right-0 top-0 h-full w-96 bg-white shadow-xl transform transition-transform duration-300 ${
+    <div className={`fixed right-0 top-0 h-full w-96 overflow-hidden rounded-l-[24px] bg-white shadow-depth-lg transform transition-transform duration-300 ${
       isOpen ? 'translate-x-0' : 'translate-x-full'
     } z-50`}>
       <div className="h-full flex flex-col">

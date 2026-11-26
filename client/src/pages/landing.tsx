@@ -1,284 +1,325 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Users, 
-  TrendingUp, 
-  GitBranch, 
-  BarChart3, 
-  Zap, 
-  Shield, 
-  Cloud,
-  CheckCircle,
-  ArrowRight,
-  Star,
-  Building,
-  Mail,
-  Phone
-} from "lucide-react";
-import requisorLogo from "@assets/Requisor Logo_1753816063994.png";
+import { useRef, type MouseEvent, type RefObject } from "react";
+import { Check } from "lucide-react";
+import mascot from "@assets/requisor-mascot.png";
+import "./landing.css";
+
+const SIGN_IN_URL = "/api/login";
+
+// Resting angle of the 3D scene, and how far the pointer can tilt it (degrees).
+const REST = { x: 14, y: -18 };
+const TILT = 10;
+
+const sceneTransform = (mx: number, my: number) =>
+  `rotateX(${REST.x - my * TILT}deg) rotateY(${REST.y + mx * TILT * 1.6}deg)`;
+
+// Illustrative board shown in the hero, not live data.
+const pipelineColumns = [
+  { name: "Qualified", cards: 3, color: "#94A3B8" },
+  { name: "Proposal", cards: 2, color: "#3B82F6" },
+  { name: "Negotiation", cards: 2, color: "#F59E0B" },
+  { name: "Won", cards: 1, color: "#10B981" },
+];
+
+const features = [
+  {
+    title: "Contact management",
+    body: "One structured record for every person and company, with a full activity timeline.",
+    tile: "bg-[linear-gradient(145deg,#2DD4BF,#0F766E)] shadow-[0_6px_0_#0B4F4A,inset_0_2px_0_rgba(255,255,255,0.35)]",
+  },
+  {
+    title: "Visual pipeline",
+    body: "Drag deals through custom stages. Values and forecasts update as you go.",
+    tile: "bg-[linear-gradient(145deg,#60A5FA,#1D4ED8)] shadow-[0_6px_0_#1E3A8A,inset_0_2px_0_rgba(255,255,255,0.35)]",
+  },
+  {
+    title: "Reporting",
+    body: "Win rate, pipeline value and rep activity on live dashboards.",
+    tile: "bg-[linear-gradient(145deg,#FBBF24,#D97706)] shadow-[0_6px_0_#92400E,inset_0_2px_0_rgba(255,255,255,0.35)]",
+  },
+];
+
+const steps = [
+  { title: "Import your contacts", body: "Upload a CSV or spreadsheet and map columns automatically." },
+  { title: "Set up your pipeline", body: "Name your stages, invite your team and assign owners." },
+  { title: "Track and close", body: "Move deals forward and watch the dashboard update live." },
+];
+
+// TODO: replace [PRICE] with real prices before this page goes public.
+const plans = [
+  { name: "Starter", price: "[PRICE]", unit: "per user / month", button: "Start free trial", featured: false },
+  { name: "Growth", price: "[PRICE]", unit: "per user / month", button: "Start free trial", featured: true },
+  { name: "Enterprise", price: "Custom", unit: "Talk to us", button: "Talk to sales", featured: false },
+];
+
+const sectionHeading = "text-[clamp(2rem,3.4vw,2.75rem)] font-extrabold tracking-[-0.03em]";
+const panelHeading = "text-[clamp(1.8rem,3vw,2.5rem)] font-extrabold leading-tight tracking-[-0.03em]";
+const heroButton =
+  "depth-press inline-flex min-h-[50px] items-center rounded-[14px] px-[26px] py-[15px] text-base font-bold";
+const accentButton = "bg-[var(--accent-brand)] text-white";
+
+function HeroScene({ sceneRef }: { sceneRef: RefObject<HTMLDivElement> }) {
+  return (
+    <div
+      className="depth-enter depth-stage flex min-w-0 flex-[1_1_500px] items-center justify-center"
+      style={{ animationDelay: ".3s" }}
+      aria-hidden="true"
+    >
+      <div className="depth-scale">
+        <div
+          ref={sceneRef}
+          className="relative h-[460px] w-[520px] [transform-style:preserve-3d] [transition:transform_.25s_ease-out]"
+          style={{ transform: sceneTransform(0, 0) }}
+        >
+          {/* base board */}
+          <div className="absolute left-10 top-[60px] flex h-[360px] w-[440px] flex-col gap-3.5 rounded-[26px] bg-white p-[22px] shadow-[inset_0_2px_0_#FFFFFF,0_14px_0_#DCE3EA,0_50px_80px_-30px_rgba(15,23,42,0.45)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[15px] font-extrabold">Q4 Pipeline</span>
+              <span className="rounded-full bg-[#E6F4F1] px-2.5 py-1 text-xs font-bold text-[#0F766E]">$412.6K</span>
+            </div>
+            <div className="grid flex-1 grid-cols-4 gap-2.5">
+              {pipelineColumns.map((column) => (
+                <div key={column.name} className="flex flex-col gap-2 rounded-[14px] bg-[#F2F5F9] p-2">
+                  <span className="text-[11px] font-bold text-[#475467]">{column.name}</span>
+                  {Array.from({ length: column.cards }, (_, index) => (
+                    <div
+                      key={index}
+                      className="h-[34px] rounded-[10px] border-l-4 bg-white shadow-[0_3px_0_#DCE3EA]"
+                      style={{ borderLeftColor: column.color }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* floating stat cards */}
+          <div className="depth-float absolute -left-2.5 top-0 [transform-style:preserve-3d]">
+            <div className="flex w-[190px] flex-col gap-1 rounded-[20px] bg-white px-[18px] py-4 shadow-[0_10px_0_#DCE3EA,0_30px_50px_-20px_rgba(15,23,42,0.4)] [transform:translateZ(90px)]">
+              <span className="text-xs text-[#5B6474]">Win rate</span>
+              <span className="text-3xl font-extrabold tracking-[-0.02em]">34%</span>
+              <div className="h-2 rounded-full bg-[#EEF2F6]">
+                <div className="h-full w-[34%] rounded-full bg-[var(--accent-brand)]" />
+              </div>
+            </div>
+          </div>
+          <div className="depth-float-down absolute -right-2.5 bottom-10 [transform-style:preserve-3d]">
+            <div className="flex w-[220px] items-center gap-3 rounded-[20px] bg-[#0F172A] px-[18px] py-4 text-white shadow-[0_10px_0_#020617,0_30px_50px_-20px_rgba(15,23,42,0.6)] [transform:translateZ(130px)]">
+              <span className="flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-[#2DD4BF] text-[#0F172A]">
+                <Check size={18} strokeWidth={2.6} />
+              </span>
+              <div>
+                <div className="text-[13px] font-bold">Deal won</div>
+                <div className="text-xs text-[#B8C1CF]">Atlas Logistics · $40,500</div>
+              </div>
+            </div>
+          </div>
+
+          {/* mascot */}
+          <div
+            className="depth-float absolute -top-[30px] right-2.5 [transform-style:preserve-3d]"
+            style={{ animationDelay: "-2s" }}
+          >
+            <img
+              src={mascot}
+              alt=""
+              className="block h-[150px] w-[150px] [filter:drop-shadow(0_24px_24px_rgba(15,23,42,0.30))] [transform:translateZ(170px)]"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Landing() {
-  const features = [
-    {
-      icon: <Users className="h-6 w-6" />,
-      title: "Contact Management",
-      description: "Organize all your contacts with detailed profiles, notes, and activity tracking."
-    },
-    {
-      icon: <GitBranch className="h-6 w-6" />,
-      title: "Visual Pipeline",
-      description: "Track deals through your sales process with drag-and-drop pipeline boards."
-    },
-    {
-      icon: <BarChart3 className="h-6 w-6" />,
-      title: "Smart Analytics",
-      description: "Get insights into your sales performance with real-time dashboard metrics."
-    },
-    {
-      icon: <Zap className="h-6 w-6" />,
-      title: "Lightning Fast",
-      description: "Built with modern technology for instant loading and smooth interactions."
-    },
-    {
-      icon: <Shield className="h-6 w-6" />,
-      title: "Secure & Private",
-      description: "Your data is protected with enterprise-grade security and authentication."
-    },
-    {
-      icon: <Cloud className="h-6 w-6" />,
-      title: "Cloud-Based",
-      description: "Access your CRM from anywhere with automatic syncing and backups."
-    }
-  ];
+  const sceneRef = useRef<HTMLDivElement>(null);
 
-  const benefits = [
-    "Increase sales productivity by 40%",
-    "Never lose track of important leads",
-    "Collaborate with your team seamlessly",
-    "Get actionable insights from your data",
-    "Scale your business with confidence"
-  ];
+  const tiltScene = (event: MouseEvent<HTMLElement>) => {
+    if (!sceneRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const mx = (event.clientX - box.left) / box.width - 0.5;
+    const my = (event.clientY - box.top) / box.height - 0.5;
+    sceneRef.current.style.transform = sceneTransform(mx, my);
+  };
+
+  const resetScene = () => {
+    if (sceneRef.current) sceneRef.current.style.transform = sceneTransform(0, 0);
+  };
 
   return (
-    <div className="min-h-screen bg-requisor-subtle">
+    <div className="landing w-full overflow-x-clip bg-[linear-gradient(180deg,#EAF4F2_0%,#F4F6FA_40%,#F4F6FA_100%)] text-[#0F172A]">
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img 
-                src={requisorLogo} 
-                alt="Requisor" 
-                className="w-10 h-10 object-contain"
-              />
-              <h1 className="ml-3 text-xl font-bold requisor-turquoise">
-                Requisor CRM
-              </h1>
-            </div>
-            <Button 
-              onClick={() => window.location.href = '/api/login'}
-              className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
-            >
-              Sign In
-            </Button>
+      <header className="mx-auto max-w-[1200px] px-6 py-5">
+        <nav
+          aria-label="Main"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] bg-white py-2.5 pl-3.5 pr-3 shadow-[inset_0_1px_0_#FFFFFF,0_10px_30px_-12px_rgba(15,23,42,0.18),0_2px_0_#DCE3EA]"
+        >
+          <a href="#top" className="flex items-center gap-2.5">
+            <img
+              src={mascot}
+              alt="Requisor dino logo"
+              className="block h-[42px] w-[42px] rounded-full shadow-[0_6px_14px_-4px_rgba(15,118,110,0.45)]"
+            />
+            <span className="text-[17px] font-extrabold tracking-[-0.01em]">Requisor CRM</span>
+          </a>
+          <div className="flex flex-wrap gap-[26px] text-[15px] font-medium text-[#475467]">
+            <a href="#features" className="hover:text-[#115E59]">Product</a>
+            <a href="#how" className="hover:text-[#115E59]">How it works</a>
+            <a href="#pricing" className="hover:text-[#115E59]">Pricing</a>
           </div>
-        </div>
-      </nav>
+          <div className="flex items-center gap-2">
+            <a href={SIGN_IN_URL} className="px-3.5 py-2.5 text-[15px] font-semibold text-[#344054] hover:text-[#115E59]">
+              Sign in
+            </a>
+            <a
+              href={SIGN_IN_URL}
+              className={`depth-press inline-flex min-h-[44px] items-center rounded-xl px-[18px] py-2.5 text-[15px] font-bold shadow-[0_5px_0_var(--accent-deep),0_12px_20px_-8px_rgba(15,118,110,0.5)] ${accentButton}`}
+            >
+              Start free trial
+            </a>
+          </div>
+        </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <Badge className="mb-6 bg-requisor-light text-requisor-turquoise border-requisor-turquoise/20">
-            ✨ Requisor CRM Platform
-          </Badge>
-          
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Supercharge Your
-            <br />
-            <span className="requisor-turquoise">
-              Sales Pipeline
+      <main>
+        {/* Hero */}
+        <section
+          id="top"
+          onMouseMove={tiltScene}
+          onMouseLeave={resetScene}
+          className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-12 px-6 pb-24 pt-14"
+        >
+          <div className="flex flex-[1_1_440px] flex-col gap-6">
+            <span
+              className="depth-enter self-start rounded-full bg-white px-3.5 py-[7px] text-[13px] font-bold text-[#0F766E] shadow-[0_3px_0_#D3E3E0,0_8px_16px_-8px_rgba(15,23,42,0.2)]"
+              style={{ animationDelay: ".05s" }}
+            >
+              The CRM for growing sales teams
             </span>
-          </h1>
-          
-          <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            The only CRM you'll ever need. Combine the power of Airtable's data organization 
-            with Pipedrive's visual sales tracking in one beautiful, modern platform.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Button 
-              size="lg"
-              onClick={() => window.location.href = '/api/login'}
-              className="bg-requisor-gradient hover:bg-requisor-turquoise/90 text-lg px-8 py-6"
+            <h1
+              className="depth-enter text-[clamp(2.6rem,5vw,4.2rem)] font-extrabold leading-[1.04] tracking-[-0.04em]"
+              style={{ animationDelay: ".15s" }}
             >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <div className="flex items-center text-sm text-gray-500">
-              <Star className="h-4 w-4 text-yellow-500 mr-1" />
-              <span>No credit card required</span>
+              Sales, with a little more depth.
+            </h1>
+            <p
+              className="depth-enter max-w-[500px] text-[19px] leading-[1.6] text-[#475467]"
+              style={{ animationDelay: ".25s" }}
+            >
+              Contacts, deals and next steps stacked into one workspace your whole team can see into.
+            </p>
+            <div className="depth-enter flex flex-wrap gap-3.5" style={{ animationDelay: ".35s" }}>
+              <a
+                href={SIGN_IN_URL}
+                className={`${heroButton} shadow-[0_6px_0_var(--accent-deep),0_18px_30px_-12px_rgba(15,118,110,0.55)] ${accentButton}`}
+              >
+                Start free trial
+              </a>
+              {/* No booking page exists yet, so this scrolls to "How it works". */}
+              <a href="#how" className={`${heroButton} bg-white shadow-[0_6px_0_#D5DCE4,0_18px_30px_-14px_rgba(15,23,42,0.25)]`}>
+                Book a demo
+              </a>
             </div>
-          </div>
-
-          {/* Hero Image/Demo */}
-          <div className="relative">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 max-w-5xl mx-auto">
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-8">
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="bg-blue-100 rounded-lg p-4 text-center">
-                    <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-blue-600">127</div>
-                    <div className="text-sm text-gray-600">Active Deals</div>
-                  </div>
-                  <div className="bg-green-100 rounded-lg p-4 text-center">
-                    <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-green-600">2,341</div>
-                    <div className="text-sm text-gray-600">Contacts</div>
-                  </div>
-                  <div className="bg-purple-100 rounded-lg p-4 text-center">
-                    <BarChart3 className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-purple-600">$847K</div>
-                    <div className="text-sm text-gray-600">Pipeline Value</div>
-                  </div>
-                  <div className="bg-orange-100 rounded-lg p-4 text-center">
-                    <CheckCircle className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-orange-600">34%</div>
-                    <div className="text-sm text-gray-600">Win Rate</div>
-                  </div>
-                </div>
-                <div className="text-center text-gray-500 text-sm">
-                  Real-time dashboard preview
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything you need to close more deals
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Built for modern sales teams who want simplicity without sacrificing power.
+            <p className="depth-enter text-sm text-[#5B6474]" style={{ animationDelay: ".45s" }}>
+              14-day free trial · No credit card required
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+          <HeroScene sceneRef={sceneRef} />
+        </section>
+
+        {/* Features */}
+        <section id="features" className="mx-auto max-w-[1200px] px-6 pb-24 pt-6">
+          <h2 className={`mb-3 text-center ${sectionHeading}`}>Built in layers.</h2>
+          <p className="mx-auto mb-12 max-w-[560px] text-center text-lg leading-[1.6] text-[#475467]">
+            Your data, your pipeline and your reports, stacked so each one feeds the next.
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-7">
             {features.map((feature, index) => (
-              <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white mb-4">
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="text-xl font-semibold">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <article
+                key={feature.title}
+                className="depth-card flex flex-col gap-3.5 rounded-3xl bg-white p-[30px] shadow-[inset_0_2px_0_#FFFFFF,0_10px_0_#DCE3EA,0_30px_50px_-24px_rgba(15,23,42,0.30)]"
+              >
+                <div className={`flex h-[54px] w-[54px] items-center justify-center rounded-2xl ${feature.tile}`}>
+                  <span className="text-lg font-extrabold text-white">0{index + 1}</span>
+                </div>
+                <h3 className="mt-1.5 text-[21px] font-extrabold tracking-[-0.01em]">{feature.title}</h3>
+                <p className="text-base leading-[1.6] text-[#475467]">{feature.body}</p>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Benefits Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-4xl font-bold text-white mb-6">
-                Join thousands of successful sales teams
-              </h2>
-              <p className="text-xl text-blue-100 mb-8">
-                Companies using CRM Pro see immediate improvements in their sales process 
-                and team productivity.
-              </p>
-              <ul className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <li key={index} className="flex items-center text-white">
-                    <CheckCircle className="h-6 w-6 text-green-400 mr-3 flex-shrink-0" />
-                    <span className="text-lg">{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold text-white mb-2">94%</div>
-                <div className="text-blue-100">Customer Satisfaction</div>
-              </div>
-              <div className="grid grid-cols-2 gap-6 text-center">
-                <div>
-                  <div className="text-3xl font-bold text-white">50K+</div>
-                  <div className="text-blue-100 text-sm">Active Users</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">99.9%</div>
-                  <div className="text-blue-100 text-sm">Uptime</div>
-                </div>
-              </div>
-            </div>
+        {/* How it works */}
+        <section id="how" className="mx-auto max-w-[1200px] px-6 pb-24">
+          <div className="rounded-[32px] bg-[#0F172A] px-6 py-14 text-white shadow-[0_14px_0_#020617,0_50px_80px_-30px_rgba(15,23,42,0.6)] sm:px-10">
+            <h2 className={`mb-10 ${panelHeading}`}>Up and running in an afternoon.</h2>
+            <ol className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6">
+              {steps.map((step, index) => (
+                <li key={step.title} className="flex flex-col gap-2.5 rounded-[20px] bg-[#1E293B] p-6 shadow-[0_6px_0_#020617]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2DD4BF] font-extrabold text-[#0F172A] shadow-[0_4px_0_#0F766E]">
+                    {index + 1}
+                  </span>
+                  <span className="text-[19px] font-bold">{step.title}</span>
+                  <span className="text-[15px] leading-[1.6] text-[#B8C1CF]">{step.body}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-white">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Ready to transform your sales process?
-          </h2>
-          <p className="text-xl text-gray-600 mb-10">
-            Start your free trial today. No setup fees, no contracts, no risk.
-          </p>
-          <Button 
-            size="lg"
-            onClick={() => window.location.href = '/api/login'}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-12 py-6"
-          >
-            Start Free Trial
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-          <p className="text-sm text-gray-500 mt-4">
-            Free 14-day trial • No credit card required • Cancel anytime
-          </p>
-        </div>
-      </section>
+        {/* Pricing */}
+        <section id="pricing" className="mx-auto max-w-[1200px] px-6 pb-24">
+          <h2 className={`mb-10 text-center ${sectionHeading}`}>Simple pricing.</h2>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-end gap-7">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`depth-card flex flex-col gap-2 rounded-3xl bg-white px-[30px] ${
+                  plan.featured
+                    ? "py-11 shadow-[0_0_0_3px_var(--accent-brand),0_16px_0_#DCE3EA,0_40px_60px_-24px_rgba(15,23,42,0.35)]"
+                    : "py-[30px] shadow-[0_10px_0_#DCE3EA,0_30px_50px_-24px_rgba(15,23,42,0.28)]"
+                }`}
+              >
+                <span className="text-lg font-extrabold">{plan.name}</span>
+                <span className="text-[38px] font-extrabold tracking-[-0.02em]">{plan.price}</span>
+                <span className="text-sm text-[#5B6474]">{plan.unit}</span>
+                {/* No sales contact page exists yet; the design points this at the final call to action. */}
+                <a
+                  href={plan.button === "Talk to sales" ? "#trial" : SIGN_IN_URL}
+                  className={`depth-press mt-3.5 flex min-h-[48px] items-center justify-center rounded-xl px-[18px] py-[13px] text-[15px] font-bold ${
+                    plan.featured
+                      ? `shadow-[0_5px_0_var(--accent-deep)] ${accentButton}`
+                      : "bg-[#F2F5F9] shadow-[0_5px_0_#D5DCE4]"
+                  }`}
+                >
+                  {plan.button}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-white" />
-              </div>
-              <span className="ml-3 text-xl font-bold text-white">CRM Pro</span>
+        {/* Call to action */}
+        <section id="trial" className="mx-auto max-w-[1200px] px-6 pb-20">
+          <div className="flex flex-wrap items-center justify-between gap-7 rounded-[32px] bg-[var(--accent-brand)] px-6 py-14 text-white shadow-[0_14px_0_var(--accent-deep),0_50px_80px_-30px_rgba(15,118,110,0.6)] sm:px-10">
+            <div className="flex flex-[1_1_400px] flex-col gap-2.5">
+              <h2 className={panelHeading}>Give your pipeline some depth.</h2>
+              <p className="text-lg text-[#D7F5F0]">Import contacts, set your stages, start closing.</p>
             </div>
-            <div className="flex items-center space-x-6 text-gray-400">
-              <div className="flex items-center">
-                <Building className="h-4 w-4 mr-2" />
-                <span>Enterprise Ready</span>
-              </div>
-              <div className="flex items-center">
-                <Shield className="h-4 w-4 mr-2" />
-                <span>SOC 2 Compliant</span>
-              </div>
-              <div className="flex items-center">
-                <Cloud className="h-4 w-4 mr-2" />
-                <span>99.9% Uptime</span>
-              </div>
-            </div>
+            <a href={SIGN_IN_URL} className={`${heroButton} !font-extrabold bg-white text-[#0F172A] shadow-[0_6px_0_#B7D9D3]`}>
+              Start free trial
+            </a>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 CRM Pro. Built with modern technology for modern sales teams.</p>
-          </div>
-        </div>
+        </section>
+      </main>
+
+      <footer className="mx-auto flex max-w-[1200px] flex-wrap justify-between gap-3 border-t border-[#DCE3EA] px-6 pb-10 pt-6 text-[13px] text-[#5B6474]">
+        <span className="flex items-center gap-2.5">
+          <img src={mascot} alt="" className="h-7 w-7 rounded-full" />
+          © 2026 Requisor CRM. A Citrus Innovations company.
+        </span>
+        <span>Privacy · Terms</span>
       </footer>
     </div>
   );

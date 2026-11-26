@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/sidebar";
@@ -35,7 +35,16 @@ import type { Contact } from "@shared/schema";
 import { CSVImporter } from "@importcsv/react";
 
 export default function Dashboard() {
-  const [currentView, setCurrentView] = useState<"grid" | "pipeline">("grid");
+  // The view is kept in the URL so other pages can link to it and a reload keeps it.
+  const [currentView, setCurrentView] = useState<"grid" | "pipeline">(() =>
+    new URLSearchParams(window.location.search).get("view") === "pipeline"
+      ? "pipeline"
+      : "grid",
+  );
+  useEffect(() => {
+    const query = currentView === "pipeline" ? "?view=pipeline" : "";
+    window.history.replaceState(null, "", window.location.pathname + query);
+  }, [currentView]);
   const [selectedContactId, setSelectedContactId] = useState<number | null>(
     null,
   );
@@ -347,7 +356,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand mx-auto mb-4"></div>
           <p className="text-gray-600">Loading CRM...</p>
         </div>
       </div>
@@ -355,16 +364,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen">
       <Sidebar currentView={currentView} onViewChange={setCurrentView} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-2xl font-bold text-gray-900">
+        <header className="mx-4 mt-4 rounded-[24px] bg-white shadow-depth-sm">
+          <div className="px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-4">
+                <h2 className="whitespace-nowrap text-2xl font-extrabold tracking-tight text-ink">
                   {currentView === "grid" ? "Grid View" : "Pipeline View"}
                 </h2>
                 <div className="flex items-center space-x-2">
@@ -387,7 +396,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -403,7 +412,7 @@ export default function Dashboard() {
                   <Input
                     type="text"
                     placeholder="Search contacts, deals..."
-                    className="pl-10 w-64"
+                    className="pl-10 w-52"
                     value={filters.search}
                     onChange={(e) =>
                       setFilters((prev) => ({
@@ -510,7 +519,6 @@ export default function Dashboard() {
                 {/* Add Contact */}
                 <Button
                   onClick={() => setShowAddContact(true)}
-                  className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
@@ -522,7 +530,7 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 overflow-auto bg-gray-50">
+          <div className="flex-1 min-w-0 overflow-auto">
             {currentView === "grid" ? (
               <GridView
                 contacts={filteredContacts as Contact[]}
@@ -540,10 +548,10 @@ export default function Dashboard() {
           </div>
 
           {/* AI Insights Sidebar */}
-          <div className="w-80 border-l border-gray-200 bg-white overflow-auto">
+          <div className="w-80 shrink-0 overflow-auto py-4 pr-4 pb-6">
             <AIInsightsPanel
               contactId={selectedContactId || undefined}
-              className="h-full"
+              className="min-h-full"
             />
           </div>
         </div>

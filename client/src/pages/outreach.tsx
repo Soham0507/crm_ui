@@ -66,17 +66,17 @@ export default function Outreach() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex">
       {/* Sidebar */}
       <Sidebar />
       
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 min-w-0 p-4 pb-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
                 <Sparkles className="h-8 w-8 text-requisor-turquoise" />
                 Sales Outreach Agent
               </h1>
@@ -84,21 +84,21 @@ export default function Outreach() {
                 AI-powered outreach from ICP to campaigns
               </p>
             </div>
-            <div className="flex gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+            <div className="flex flex-wrap gap-3">
+              <div className="min-w-[110px] rounded-2xl bg-white px-4 py-3 text-center shadow-depth-sm">
+                <div className="text-2xl font-extrabold text-ink">
                   {icpProfiles.length}
                 </div>
                 <div className="text-sm text-gray-500">ICPs Created</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+              <div className="min-w-[110px] rounded-2xl bg-white px-4 py-3 text-center shadow-depth-sm">
+                <div className="text-2xl font-extrabold text-ink">
                   {activeCampaigns}
                 </div>
                 <div className="text-sm text-gray-500">Active Campaigns</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+              <div className="min-w-[110px] rounded-2xl bg-white px-4 py-3 text-center shadow-depth-sm">
+                <div className="text-2xl font-extrabold text-ink">
                   {totalLeadsReached}
                 </div>
                 <div className="text-sm text-gray-500">Leads Reached</div>
@@ -107,11 +107,11 @@ export default function Outreach() {
           </div>
 
           {/* Progress Indicator */}
-          <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 bg-white p-4 rounded-[20px] shadow-depth-sm">
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                activeTab === 'icp' ? 'bg-requisor-turquoise text-white' : 
-                selectedICPId ? 'bg-green-500 text-white' : 'bg-gray-200'
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold ${
+                activeTab === 'icp' ? 'bg-brand text-white shadow-press-brand-down' : 
+                selectedICPId ? 'bg-emerald-500 text-white' : 'bg-subtle text-ink-muted shadow-press-down'
               }`}>
                 {selectedICPId ? '✓' : '1'}
               </div>
@@ -122,9 +122,9 @@ export default function Outreach() {
             <div className="w-8 h-0.5 bg-gray-200" />
             
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                activeTab === 'leads' ? 'bg-requisor-turquoise text-white' : 
-                selectedListId ? 'bg-green-500 text-white' : 'bg-gray-200'
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold ${
+                activeTab === 'leads' ? 'bg-brand text-white shadow-press-brand-down' : 
+                selectedListId ? 'bg-emerald-500 text-white' : 'bg-subtle text-ink-muted shadow-press-down'
               }`}>
                 {selectedListId ? '✓' : '2'}
               </div>
@@ -135,8 +135,8 @@ export default function Outreach() {
             <div className="w-8 h-0.5 bg-gray-200" />
             
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                activeTab === 'campaigns' ? 'bg-requisor-turquoise text-white' : 'bg-gray-200'
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold ${
+                activeTab === 'campaigns' ? 'bg-brand text-white shadow-press-brand-down' : 'bg-subtle text-ink-muted shadow-press-down'
               }`}>
                 3
               </div>
@@ -147,8 +147,8 @@ export default function Outreach() {
             <div className="w-8 h-0.5 bg-gray-200" />
             
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                activeTab === 'dashboard' ? 'bg-requisor-turquoise text-white' : 'bg-gray-200'
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold ${
+                activeTab === 'dashboard' ? 'bg-brand text-white shadow-press-brand-down' : 'bg-subtle text-ink-muted shadow-press-down'
               }`}>
                 4
               </div>
@@ -161,7 +161,7 @@ export default function Outreach() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white shadow-sm">
+          <TabsList className="h-auto flex-wrap justify-start gap-1 bg-white p-1.5 shadow-depth-sm">
             <TabsTrigger value="icp" className="gap-2">
               <Target className="h-4 w-4" />
               ICP Builder
@@ -211,7 +211,6 @@ export default function Outreach() {
                 </div>
                 <Button 
                   onClick={() => setEmailComposerOpen(true)}
-                  className="bg-requisor-turquoise hover:bg-requisor-turquoise/90"
                 >
                   <Send className="h-4 w-4 mr-2" />
                   Compose Email

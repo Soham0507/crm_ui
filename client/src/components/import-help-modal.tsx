@@ -84,7 +84,7 @@ export default function ImportHelpModal({ isOpen, onClose }: ImportHelpModalProp
           <div>
             <h4 className="font-medium text-gray-900 mb-3">Valid Status Values</h4>
             <div className="flex flex-wrap gap-2">
-              <Badge className="bg-blue-100 text-blue-800">lead</Badge>
+              <Badge className="bg-slate-100 text-slate-700">lead</Badge>
               <Badge className="bg-green-100 text-green-800">qualified</Badge>
               <Badge className="bg-yellow-100 text-yellow-800">proposal</Badge>
               <Badge className="bg-green-100 text-green-800">closed-won</Badge>

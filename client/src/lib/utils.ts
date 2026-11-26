@@ -1,6 +1,22 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
 import { format, formatDistanceToNow } from "date-fns";
+
+// Teach the class merger that the custom depth shadows replace one another.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      shadow: [
+        {
+          shadow: [
+            "depth-sm", "depth", "depth-lg", "press", "press-down",
+            "press-brand", "press-brand-down", "press-danger",
+          ],
+        },
+      ],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -28,13 +44,13 @@ export function formatRelativeDate(date: Date | string): string {
 export function getStatusColor(status: string): string {
   switch (status.toLowerCase()) {
     case 'lead':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-slate-100 text-slate-700';
     case 'qualified':
-      return 'bg-green-100 text-green-800';
+      return 'bg-blue-100 text-blue-800';
     case 'proposal':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-amber-100 text-amber-800';
     case 'closed-won':
-      return 'bg-green-100 text-green-800';
+      return 'bg-emerald-100 text-emerald-800';
     case 'closed-lost':
       return 'bg-red-100 text-red-800';
     default:

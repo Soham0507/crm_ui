@@ -487,7 +487,7 @@ export default function ICPEmailFinder() {
                           <Mail className="h-4 w-4 text-muted-foreground" />
                           <a 
                             href={`mailto:${contact.email}`}
-                            className="text-sm text-blue-600 hover:underline"
+                            className="text-sm text-brand hover:underline"
                           >
                             {contact.email}
                           </a>

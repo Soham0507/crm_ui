@@ -152,7 +152,7 @@ export default function EditableCell({
         );
       case 'email':
         return value ? (
-          <a href={`mailto:${value}`} className="text-blue-600 hover:underline">
+          <a href={`mailto:${value}`} className="text-brand hover:underline">
             {value}
           </a>
         ) : (
@@ -160,7 +160,7 @@ export default function EditableCell({
         );
       case 'phone':
         return value ? (
-          <a href={`tel:${value}`} className="text-blue-600 hover:underline">
+          <a href={`tel:${value}`} className="text-brand hover:underline">
             {value}
           </a>
         ) : (

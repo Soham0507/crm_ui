@@ -31,7 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { format } from "date-fns";
-import type { CustomTableWithRecords, TableColumn, CustomTableRecord } from "@shared/schema";
+import { isChecked, type CustomTableWithRecords, type TableColumn, type CustomTableRecord } from "@shared/schema";
 
 interface CustomTableViewProps {
   table: CustomTableWithRecords;
@@ -46,11 +46,17 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Adding or removing records changes this table and the counts on the list.
+  const refreshRecords = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${table.id}`] });
+    queryClient.invalidateQueries({ queryKey: ['/api/custom-tables'] });
+  };
+
   const createRecordMutation = useMutation({
-    mutationFn: (data: any) => 
+    mutationFn: (data: any) =>
       apiRequest('POST', `/api/custom-tables/${table.id}/records`, { data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${table.id}`] });
+      refreshRecords();
       setIsAddingRecord(false);
       setNewRecordData({});
       toast({
@@ -142,8 +148,8 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
         throw new Error(result.message || 'Import failed');
       }
       
-      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${table.id}`] });
-      
+      refreshRecords();
+
       toast({
         title: "Import successful",
         description: result.message || `Imported ${result.created} records successfully.`,
@@ -168,7 +174,7 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
     mutationFn: (id: number) =>
       apiRequest('DELETE', `/api/custom-tables/${table.id}/records/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/custom-tables/${table.id}`] });
+      refreshRecords();
       toast({
         title: "Record deleted",
         description: "Record has been deleted successfully.",
@@ -194,13 +200,11 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
       } else {
         switch (column.type) {
           case 'checkbox':
+          case 'boolean':
             initialData[column.id] = false;
             break;
-          case 'number':
-          case 'currency':
-            initialData[column.id] = 0;
-            break;
           default:
+            // Numbers start blank too, so an untouched field isn't saved as 0.
             initialData[column.id] = '';
         }
       }
@@ -243,23 +247,25 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
       case 'date':
         return value ? formatDate(value) : '-';
       case 'checkbox':
-        return <Checkbox checked={Boolean(value)} disabled />;
+      case 'boolean':
+        return <Checkbox checked={isChecked(value)} disabled />;
       case 'dropdown':
         return value ? <Badge variant="secondary">{value}</Badge> : '-';
       case 'email':
         return value ? (
-          <a href={`mailto:${value}`} className="text-blue-600 hover:underline">
+          <a href={`mailto:${value}`} className="text-brand hover:underline">
             {value}
           </a>
         ) : '-';
       case 'phone':
         return value ? (
-          <a href={`tel:${value}`} className="text-blue-600 hover:underline">
+          <a href={`tel:${value}`} className="text-brand hover:underline">
             {value}
           </a>
         ) : '-';
       default:
-        return value || '-';
+        // Only a missing value shows as "-"; 0 is a real value.
+        return value === undefined || value === null || value === '' ? '-' : value;
     }
   };
 
@@ -316,8 +322,10 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
             )}
             <Input
               type="number"
-              value={value || ''}
-              onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+              value={value ?? ''}
+              onChange={(e) =>
+                onChange(e.target.value === '' ? '' : parseFloat(e.target.value))
+              }
               className={column.type === 'currency' ? "pl-9" : ""}
               step={column.type === 'currency' ? "0.01" : "1"}
             />
@@ -325,9 +333,10 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
         );
 
       case 'checkbox':
+      case 'boolean':
         return (
           <Checkbox
-            checked={Boolean(value)}
+            checked={isChecked(value)}
             onCheckedChange={onChange}
           />
         );
@@ -412,7 +421,7 @@ export default function CustomTableView({ table, onEdit }: CustomTableViewProps)
           <TableBody>
             {/* Add new record row */}
             {isAddingRecord && (
-              <TableRow className="bg-blue-50">
+              <TableRow className="bg-brand-soft">
                 {columns.map((column) => (
                   <TableCell key={column.id}>
                     {renderCellValue(

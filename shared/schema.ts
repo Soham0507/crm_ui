@@ -371,10 +371,16 @@ export interface TableColumn {
   id: string;
   name: string;
   displayName: string;
-  type: 'text' | 'longtext' | 'number' | 'currency' | 'date' | 'dropdown' | 'checkbox' | 'email' | 'phone' | 'url';
+  // The table editor creates 'boolean'; 'checkbox' is treated the same way.
+  type: 'text' | 'longtext' | 'number' | 'currency' | 'date' | 'dropdown' | 'checkbox' | 'boolean' | 'email' | 'phone' | 'url';
   required?: boolean;
   options?: string[]; // For dropdown type
   defaultValue?: any;
+}
+
+// Yes/no values are stored as true/false, but older CSV imports saved text.
+export function isChecked(value: unknown): boolean {
+  return ['true', '1', 'yes'].includes(String(value).trim().toLowerCase());
 }
 
 export interface CustomTableSchema {
@@ -388,6 +394,11 @@ export interface CustomTableSchema {
 
 export type CustomTableWithRecords = CustomTable & {
   records: CustomTableRecord[];
+};
+
+// An entry in the table list.
+export type CustomTableSummary = CustomTable & {
+  recordCount: number;
 };
 
 // Email Provider Accounts (Gmail/Outlook OAuth)

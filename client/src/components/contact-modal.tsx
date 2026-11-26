@@ -240,7 +240,7 @@ export default function ContactModal({ contactId, isOpen, onClose, startInEditMo
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
           </div>
         </DialogContent>
       </Dialog>
@@ -259,7 +259,7 @@ export default function ContactModal({ contactId, isOpen, onClose, startInEditMo
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12">
-                <AvatarFallback className="bg-blue-100 text-blue-600 font-medium text-lg">
+                <AvatarFallback className="bg-brand-soft text-brand font-bold text-lg">
                   {getInitials(contact.name)}
                 </AvatarFallback>
               </Avatar>

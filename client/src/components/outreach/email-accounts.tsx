@@ -345,8 +345,8 @@ export function EmailAccounts() {
               )}
             </Button>
           </div>
-          <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-            <Shield className="h-4 w-4 text-blue-500 mt-0.5" />
+          <div className="flex items-start gap-2 p-3 bg-brand-soft rounded-xl">
+            <Shield className="h-4 w-4 text-brand mt-0.5" />
             <p className="text-sm text-gray-600">
               Your email credentials are securely encrypted and only used to send emails on your behalf.
               We never store or access your email content.

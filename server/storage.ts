@@ -31,6 +31,7 @@ import {
   type CustomTableRecord,
   type InsertCustomTableRecord,
   type CustomTableWithRecords,
+  type CustomTableSummary,
   type ICPProfile,
   type InsertICPProfile,
   type LeadList,
@@ -50,7 +51,7 @@ import {
   type InsertEmailSequence,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count, getTableColumns } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -88,7 +89,7 @@ export interface IStorage {
   createActivity(activity: InsertActivity): Promise<Activity>;
 
   // Custom Tables
-  getCustomTables(userId: string): Promise<CustomTable[]>;
+  getCustomTables(userId: string): Promise<CustomTableSummary[]>;
   getCustomTable(id: number, userId: string): Promise<CustomTable | undefined>;
   getCustomTableWithRecords(
     id: number,
@@ -430,13 +431,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Custom Tables
-  async getCustomTables(userId: string): Promise<CustomTable[]> {
+  async getCustomTables(userId: string): Promise<CustomTableSummary[]> {
     return await db
-      .select()
+      .select({
+        ...getTableColumns(customTables),
+        recordCount: count(customTableRecords.id),
+      })
       .from(customTables)
+      // A left join keeps tables that have no records yet.
+      .leftJoin(
+        customTableRecords,
+        and(
+          eq(customTableRecords.tableId, customTables.id),
+          eq(customTableRecords.userId, userId),
+        ),
+      )
       .where(
         and(eq(customTables.userId, userId), eq(customTables.isActive, true)),
       )
+      .groupBy(customTables.id)
       .orderBy(customTables.createdAt);
   }
 

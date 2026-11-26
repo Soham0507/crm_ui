@@ -179,11 +179,11 @@ export default function BulkActionsBar({
   if (selectedContacts.size === 0) return null;
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+    <div className="bg-brand-soft border border-brand/20 rounded-2xl p-4 mb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Badge variant="default" className="bg-blue-600">
+            <Badge variant="default" className="bg-brand">
               {selectedContacts.size} selected
             </Badge>
             <span className="text-sm text-gray-600">

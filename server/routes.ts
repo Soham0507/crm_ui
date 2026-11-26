@@ -11,6 +11,7 @@ import {
   insertICPProfileSchema,
   insertLeadListSchema,
   insertLeadSchema,
+  isChecked,
   type CustomTableSchema,
   type ICPProfile,
   type Lead,
@@ -632,21 +633,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const schema = table.schema as CustomTableSchema;
         const columns = schema.columns || [];
 
-        // Create fields array from column names
-        const fields = columns.map((col: any) => col.name);
-
-        // Transform records data
-        const records = table.records.map((record) => {
-          const data: any = {};
-          columns.forEach((col: any) => {
-            const recordData = record.data as any;
-            data[col.name] = recordData[col.name] || "";
-          });
-          return data;
-        });
+        // One CSV column per table column, headed by its name. Records are keyed
+        // by column id; rows from older CSV imports are keyed by name, so fall
+        // back to it. `??` keeps 0 and false.
+        const fields = columns.map((col: any) => ({
+          label: col.name,
+          value: (data: any) => data[col.id] ?? data[col.name] ?? "",
+        }));
 
         const json2csvParser = new Parser({ fields });
-        const csv = json2csvParser.parse(records);
+        const csv = json2csvParser.parse(
+          table.records.map((record) => record.data as any),
+        );
 
         const fileName = `${table.tableName}_export_${new Date().toISOString().split("T")[0]}.csv`;
         res.header("Content-Type", "text/csv");
@@ -689,7 +687,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Process CSV file
         const stream = fs
           .createReadStream(req.file.path)
-          .pipe(csvParser())
+          // Excel's "CSV UTF-8" starts with a byte-order mark, which would
+          // otherwise become part of the first heading.
+          .pipe(
+            csvParser({
+              mapHeaders: ({ header }) => header.replace(/^﻿/, ""),
+            }),
+          )
           .on("data", (data) => {
             processed++;
             try {
@@ -704,27 +708,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 if (col.required && !value) {
                   hasRequiredFields = false;
                   errors.push(
-                    `Row ${processed}: Missing required field "${col.displayName}"`,
+                    `Row ${processed}: Missing required field "${col.name}"`,
                   );
                   return;
                 }
 
-                // Type validation and conversion
+                // Type validation and conversion. Records are keyed by column
+                // id, which is what the table view reads.
                 switch (col.type) {
                   case "number":
-                    recordData[col.name] = value ? parseFloat(value) || 0 : 0;
+                    // A blank cell stays blank rather than becoming 0.
+                    recordData[col.id] = value ? parseFloat(value) || 0 : null;
                     break;
                   case "checkbox":
-                    recordData[col.name] =
-                      value === "true" || value === "1" || value === "yes";
+                  case "boolean":
+                    recordData[col.id] = isChecked(value);
                     break;
                   case "date":
-                    recordData[col.name] = value
+                    recordData[col.id] = value
                       ? new Date(value).toISOString()
                       : null;
                     break;
                   default:
-                    recordData[col.name] = value.toString();
+                    recordData[col.id] = value.toString();
                 }
               });
 

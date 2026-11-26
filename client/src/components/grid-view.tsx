@@ -175,7 +175,7 @@ export default function GridView({
   };
 
   return (
-    <div className="h-full px-6 py-6">
+    <div className="h-full px-4 pt-4 pb-6">
       <BulkActionsBar
         selectedContacts={selectedContacts}
         contacts={contacts}
@@ -183,12 +183,12 @@ export default function GridView({
         onContactsUpdated={handleContactsUpdated}
       />
       
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
+      <div className="bg-white rounded-[24px] shadow-depth-sm h-full flex flex-col overflow-hidden">
         {/* Table */}
         <div className="flex-1 overflow-auto custom-scrollbar">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableRow className="bg-subtle hover:bg-subtle">
                 <TableHead className="w-12">
                   <Checkbox
                     checked={selectedContacts.size === currentContacts.length && currentContacts.length > 0}
@@ -242,7 +242,7 @@ export default function GridView({
                         {column.key === 'name' ? (
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarFallback className="bg-blue-100 text-blue-600 font-medium">
+                              <AvatarFallback className="bg-brand-soft text-brand font-bold">
                                 {getInitials(contact.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -301,14 +301,14 @@ export default function GridView({
 
         {/* Pagination */}
         {contacts.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="px-6 py-4 border-t border-line bg-subtle">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-700">
                   Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} results
                 </div>
                 {selectedContacts.size > 0 && (
-                  <div className="text-sm text-blue-600">
+                  <div className="text-sm font-semibold text-brand">
                     {selectedContacts.size} selected
                   </div>
                 )}
