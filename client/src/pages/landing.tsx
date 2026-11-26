@@ -29,6 +29,11 @@ const css = `
 .d-card:hover{transform:perspective(900px) rotateX(6deg) rotateY(-6deg) translateY(-6px)}
 .d-link{color:var(--muted);text-decoration:none}
 .d-link:hover{color:#115E59}
+/* The 3D scene is drawn at 520 x 460 and scaled down on narrow screens. */
+.scene-stage{height:520px;min-width:0}
+.scene-scale{flex:none}
+@media (max-width:600px){.scene-stage{height:360px}.scene-scale{scale:.64}}
+@media (max-width:380px){.scene-stage{height:310px}.scene-scale{scale:.54}}
 @media (prefers-reduced-motion: reduce){.d-float,.d-float2,.d-enter{animation:none}.d-card:hover{transform:none}}
 `;
 
@@ -274,8 +279,8 @@ export default function Landing() {
         </Par>
 
         {/* 3D scene */}
-        <Par speed={0.08} style={{ flex: "1 1 500px", height: 520 }}><div className="d-enter" style={{ animationDelay: ".3s", height: "100%", perspective: 1400, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={sceneStyle}>
+        <Par speed={0.08} className="scene-stage" style={{ flex: "1 1 500px" }}><div className="d-enter" style={{ animationDelay: ".3s", height: "100%", perspective: 1400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="scene-scale"><div style={sceneStyle}>
             <div style={{ position: "absolute", left: 40, top: 60, width: 440, height: 360, borderRadius: 26, background: "var(--surface)", boxShadow: "0 2px 0 var(--hi) inset, 0 14px 0 var(--edge), 0 50px 80px -30px rgba(15,23,42,0.45)", transform: "translateZ(0)", padding: 22, boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 15, fontWeight: 800 }}>Q4 Pipeline</span>
@@ -318,7 +323,7 @@ export default function Landing() {
             <div className="d-float" style={{ position: "absolute", right: 10, top: -30, transformStyle: "preserve-3d", animationDelay: "-2s" }}>
               <img src={dino} alt="" style={{ transform: "translateZ(170px)", width: 150, height: 150, display: "block", filter: "drop-shadow(0 24px 24px rgba(15,23,42,0.30))" }} />
             </div>
-          </div>
+          </div></div>
         </div></Par>
       </section>
 
